@@ -76,7 +76,7 @@ const Index = () => {
     if (!selected) return;
     try {
       await escalatePatient(selected.id);
-      toast.success("Patient escalated");
+      toast.success("Escalation sent to Monday");
       refetch();
     } catch (e) {
       toast.error("Escalation failed", {
@@ -147,13 +147,7 @@ const Index = () => {
                   <WelcomeCallForm patient={selected} onFieldChange={handleFieldChange} />
                   <ReviewPanel patient={selected} />
                   <SendToMondayButton onSend={handleSend} disabled={!selected} />
-
-                  <div className="border-t pt-4">
-                    <p className="text-xs text-center text-muted-foreground mb-2">
-                      Something wrong? Escalate this patient instead of completing.
-                    </p>
-                    <EscalateButton onEscalate={handleEscalate} disabled={!selected} />
-                  </div>
+                  <EscalateButton onEscalate={handleEscalate} disabled={!selected} />
                 </>
               )}
             </section>

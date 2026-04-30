@@ -1,9 +1,6 @@
-import { useEffect, useState } from "react";
-import { AlertTriangle, Loader2, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-type State = "idle" | "sending" | "success" | "error";
 
 interface Props {
   onEscalate: () => Promise<void>;
@@ -11,93 +8,47 @@ interface Props {
 }
 
 export function EscalateButton({ onEscalate, disabled }: Props) {
-  const [state, setState] = useState<State>("idle");
   const [confirming, setConfirming] = useState(false);
-
-  useEffect(() => {
-    if (state === "success" || state === "error") {
-      const t = setTimeout(() => setState("idle"), 2200);
-      return () => clearTimeout(t);
-    }
-  }, [state]);
+  const [sending, setSending] = useState(false);
 
   const handleClick = async () => {
     if (!confirming) {
       setConfirming(true);
       return;
     }
-    setConfirming(false);
-    setState("sending");
+    setSending(true);
     try {
       await onEscalate();
-      setState("success");
-    } catch {
-      setState("error");
+    } finally {
+      setSending(false);
+      setConfirming(false);
     }
   };
 
-  const handleCancel = () => setConfirming(false);
-
-  if (confirming) {
-    return (
-      <div className="flex justify-center gap-3 pt-2">
-        <Button
-          onClick={handleClick}
-          size="lg"
-          className="gap-2 bg-red-600 hover:bg-red-700 text-white rounded-full px-8 h-12 text-base font-semibold shadow-elevate"
-        >
-          <AlertTriangle className="h-4 w-4" />
-          Yes, Escalate
-        </Button>
-        <Button
-          onClick={handleCancel}
-          size="lg"
-          variant="outline"
-          className="rounded-full px-8 h-12 text-base font-semibold"
-        >
-          Cancel
-        </Button>
-      </div>
-    );
-  }
-
-  const config = {
-    idle: {
-      label: "Escalate",
-      icon: <AlertTriangle className="h-4 w-4" />,
-      className: "bg-red-600 hover:bg-red-700 text-white",
-    },
-    sending: {
-      label: "Escalating…",
-      icon: <Loader2 className="h-4 w-4 animate-spin" />,
-      className: "bg-amber-500 hover:bg-amber-500 text-white",
-    },
-    success: {
-      label: "Escalated",
-      icon: <Check className="h-4 w-4" />,
-      className: "bg-red-600 hover:bg-red-600 text-white ring-4 ring-red-300/60",
-    },
-    error: {
-      label: "Escalation failed — retry",
-      icon: <AlertTriangle className="h-4 w-4" />,
-      className: "bg-red-800 hover:bg-red-900 text-white",
-    },
-  }[state];
-
   return (
-    <div className="flex justify-center pt-2">
-      <Button
+    <div className="flex items-center justify-center gap-2 pt-2">
+      <button
         onClick={handleClick}
-        disabled={disabled || state === "sending"}
-        size="lg"
+        disabled={disabled || sending}
         className={cn(
-          "gap-2 shadow-elevate rounded-full px-8 h-12 text-base font-semibold transition-all duration-300",
-          config.className,
+          "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border",
+          confirming
+            ? "bg-destructive/15 text-destructive border-destructive/30"
+            : "bg-muted/50 text-muted-foreground border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20",
+          (disabled || sending) && "opacity-50 cursor-not-allowed",
         )}
       >
-        {config.icon}
-        <span>{config.label}</span>
-      </Button>
+        {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+        {sending ? "Escalating…" : confirming ? "Confirm Escalate?" : "Escalate"}
+      </button>
+      {confirming && !sending && (
+        <button
+          onClick={() => setConfirming(false)}
+          className="text-xs text-muted-foreground hover:text-foreground"
+        >
+          Cancel
+        </button>
+      )}
     </div>
   );
 }
