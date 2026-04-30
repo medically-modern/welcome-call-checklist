@@ -50,6 +50,7 @@ export const COL = {
   
   // Stage
   stageAdvancer: "color_mm1ws96t",
+  escalation: "color_mm1x7997",
 } as const;
 
 export const READ_COLUMN_IDS = [

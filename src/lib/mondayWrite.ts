@@ -30,3 +30,14 @@ export async function sendPatientToMonday(p: Patient): Promise<void> {
 
   await Promise.all(tasks);
 }
+
+/**
+ * Escalate a patient — sets Escalation to "Escalation Required" (index 0)
+ * and Stage Advancer to "Stuck / Don't Proceed" (index 2).
+ */
+export async function escalatePatient(itemId: string): Promise<void> {
+  await Promise.all([
+    writeStatusIndex(itemId, COL.escalation, 0),    // Escalation Required
+    writeStatusIndex(itemId, COL.stageAdvancer, 2),  // Stuck / Don't Proceed
+  ]);
+}

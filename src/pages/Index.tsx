@@ -6,11 +6,12 @@ import { WelcomeCallForm } from "@/components/dashboard/WelcomeCallForm";
 import { ReviewPanel } from "@/components/dashboard/ReviewPanel";
 import { PatientsSidebar } from "@/components/dashboard/PatientsSidebar";
 import { SendToMondayButton } from "@/components/dashboard/SendToMondayButton";
+import { EscalateButton } from "@/components/dashboard/EscalateButton";
 import { Button } from "@/components/ui/button";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { RotateCcw, ClipboardCheck } from "lucide-react";
 import { toast } from "sonner";
-import { sendPatientToMonday } from "@/lib/mondayWrite";
+import { sendPatientToMonday, escalatePatient } from "@/lib/mondayWrite";
 
 const Index = () => {
   const { patients, loading, error, refetch, update, clearOverlay } = useMondayPatients();
@@ -63,6 +64,20 @@ const Index = () => {
       refetch();
     } catch (e) {
       toast.error("Send to Monday failed", {
+        description: e instanceof Error ? e.message : String(e),
+      });
+      throw e;
+    }
+  };
+
+  const handleEscalate = async () => {
+    if (!selected) return;
+    try {
+      await escalatePatient(selected.id);
+      toast.success("Patient escalated");
+      refetch();
+    } catch (e) {
+      toast.error("Escalation failed", {
         description: e instanceof Error ? e.message : String(e),
       });
       throw e;
@@ -130,6 +145,13 @@ const Index = () => {
                   <WelcomeCallForm patient={selected} onFieldChange={handleFieldChange} />
                   <ReviewPanel patient={selected} />
                   <SendToMondayButton onSend={handleSend} disabled={!selected} />
+
+                  <div className="border-t pt-4">
+                    <p className="text-xs text-center text-muted-foreground mb-2">
+                      Something wrong? Escalate this patient instead of completing.
+                    </p>
+                    <EscalateButton onEscalate={handleEscalate} disabled={!selected} />
+                  </div>
                 </>
               )}
             </section>
