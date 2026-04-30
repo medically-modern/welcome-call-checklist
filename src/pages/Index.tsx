@@ -55,7 +55,7 @@ const Index = () => {
       welcomeCallTextIndex: null,
       orderHandling: "",
       orderHandlingIndex: null,
-      addressEdited: "",
+      addressEdited: null,
       escalated: false,
     } as Partial<Patient>);
     toast.success("Cleared local edits — refetching from Monday");

@@ -69,7 +69,7 @@ export function mondayItemToPatient(item: MondayItem): Patient {
     welcomeCallTextIndex: statusIndex(COL.welcomeCallText),
     orderHandling: txt(COL.orderHandling),
     orderHandlingIndex: statusIndex(COL.orderHandling),
-    addressEdited: "",
+    addressEdited: null,
     escalated: false,
     receivedAt: new Date().toISOString(),
     lastUpdated: new Date().toISOString(),

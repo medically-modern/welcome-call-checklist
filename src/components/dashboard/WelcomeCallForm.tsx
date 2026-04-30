@@ -223,11 +223,11 @@ export function WelcomeCallForm({ patient, onFieldChange }: Props) {
             Address
           </label>
           <Input
-            value={patient.addressEdited || patient.address}
+            value={patient.addressEdited !== null ? patient.addressEdited : patient.address}
             onChange={(e) => onFieldChange("addressEdited", e.target.value)}
             placeholder="Enter address"
           />
-          {patient.addressEdited && patient.addressEdited !== patient.address && (
+          {patient.addressEdited !== null && patient.addressEdited !== patient.address && (
             <p className="text-xs text-amber-600 mt-1">Address has been edited</p>
           )}
         </div>

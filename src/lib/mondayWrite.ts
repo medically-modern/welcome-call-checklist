@@ -20,7 +20,7 @@ export async function sendPatientToMonday(p: Patient): Promise<void> {
   if (p.orderHandlingIndex !== null)
     tasks.push(writeStatusIndex(p.id, COL.orderHandling, p.orderHandlingIndex));
 
-  if (p.addressEdited) tasks.push(writeLocation(p.id, COL.address, p.addressEdited));
+  if (p.addressEdited !== null) tasks.push(writeLocation(p.id, COL.address, p.addressEdited));
 
   // Escalation toggle — if flagged, write Escalation Required
   if (p.escalated) {
