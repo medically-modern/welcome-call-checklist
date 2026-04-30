@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMondayPatients } from "@/hooks/useMondayPatients";
 import type { Patient } from "@/lib/workflow";
-import { ChecklistPanel } from "@/components/dashboard/ChecklistPanel";
-import { SecondaryPanel } from "@/components/dashboard/SecondaryPanel";
+import { PatientInfoCard } from "@/components/dashboard/PatientInfoCard";
+import { WelcomeCallForm } from "@/components/dashboard/WelcomeCallForm";
+import { ReviewPanel } from "@/components/dashboard/ReviewPanel";
 import { PatientsSidebar } from "@/components/dashboard/PatientsSidebar";
-import { PatientProfileCard } from "@/components/dashboard/PatientProfileCard";
 import { SendToMondayButton } from "@/components/dashboard/SendToMondayButton";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { RotateCcw, ClipboardCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -26,16 +25,31 @@ const Index = () => {
     [patients, selectedId],
   );
 
-  const onCheckChange = (id: string, checked: boolean) => {
+  const handleFieldChange = (field: keyof Patient, value: string | number | null) => {
     if (!selected) return;
-    const checklist = { ...selected.checklist, [id]: checked };
-    update(selected.id, { checklist });
+    update(selected.id, { [field]: value } as Partial<Patient>);
   };
 
   const resetForNewPatient = () => {
     if (!selected) return;
     clearOverlay(selected.id);
-    update(selected.id, { notes: "", checklist: {} });
+    update(selected.id, {
+      monitorQty: "",
+      pumpQty: "",
+      qtyInf1: "",
+      infusionSet1: "",
+      infusionSet1Index: null,
+      qtyInf2: "",
+      infusionSet2: "",
+      infusionSet2Index: null,
+      subscriptionType: "",
+      subscriptionTypeIndex: null,
+      welcomeCallText: "",
+      welcomeCallTextIndex: null,
+      orderHandling: "",
+      orderHandlingIndex: null,
+      addressEdited: "",
+    } as Partial<Patient>);
     toast.success("Cleared local edits — refetching from Monday");
     refetch();
   };
@@ -45,6 +59,8 @@ const Index = () => {
     try {
       await sendPatientToMonday(selected);
       toast.success("Sent to Monday");
+      clearOverlay(selected.id);
+      refetch();
     } catch (e) {
       toast.error("Send to Monday failed", {
         description: e instanceof Error ? e.message : String(e),
@@ -94,7 +110,7 @@ const Index = () => {
             </div>
           </header>
 
-          <main className="flex-1 px-6 py-6">
+          <main className="flex-1 px-6 py-6 overflow-y-auto">
             <section className="max-w-5xl mx-auto space-y-5">
               {!selected && (
                 <div className="rounded-xl bg-card border shadow-card p-10 text-center">
@@ -109,30 +125,12 @@ const Index = () => {
               )}
 
               {selected && (
-                <Tabs defaultValue="checklist" className="space-y-5">
-                  <TabsList className="grid w-full max-w-md grid-cols-2">
-                    <TabsTrigger value="checklist">Checklist</TabsTrigger>
-                    <TabsTrigger value="tab2">Tab 2</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="checklist" className="space-y-5 mt-0">
-                    <PatientProfileCard patient={selected} />
-
-                    <ChecklistPanel
-                      patient={selected}
-                      onCheckChange={onCheckChange}
-                      onNotesChange={(v) => update(selected.id, { notes: v })}
-                    />
-
-                    <SendToMondayButton onSend={handleSend} disabled={!selected} />
-                  </TabsContent>
-
-                  <TabsContent value="tab2" className="space-y-5 mt-0">
-                    <PatientProfileCard patient={selected} />
-                    <SecondaryPanel patient={selected} />
-                    <SendToMondayButton onSend={handleSend} disabled={!selected} />
-                  </TabsContent>
-                </Tabs>
+                <>
+                  <PatientInfoCard patient={selected} />
+                  <WelcomeCallForm patient={selected} onFieldChange={handleFieldChange} />
+                  <ReviewPanel patient={selected} />
+                  <SendToMondayButton onSend={handleSend} disabled={!selected} />
+                </>
               )}
             </section>
           </main>

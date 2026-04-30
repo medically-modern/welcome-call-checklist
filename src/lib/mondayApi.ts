@@ -4,22 +4,63 @@
 const MONDAY_API_URL = "https://api.monday.com/v2";
 const MONDAY_API_VERSION = "2024-10";
 
-// TODO: Set your Monday board ID
-export const BOARD_ID = 0;
+export const BOARD_ID = 18410804557;
 
-// TODO: Define your board groups/statuses here
 export const GROUPS = {
-  default: "new_group__TODO",
+  welcomeCall: "group_mm1wvq8p",
+  completed: "group_mm1x5s5d",
+  stuck: "group_mm1xyczx",
+  escalation: "group_mm1x5c0",
 } as const;
 
-// TODO: Add your Monday column IDs here
-// Example: name: "text_xxxx",
+// Read columns — everything we need to display
 export const COL = {
-  // TODO: Add your read columns here
+  // Demographics (read-only)
+  dob: "text_mm1xvxst",
+  phone: "phone_mm1x44yk",
+  email: "text_mm1xc140",
+  address: "location_mm1xhw17",
+  gender: "color_mm1x1bdg",
+  
+  // Insurance (read-only)
+  primaryInsurance: "color_mm1x157j",
+  memberId1: "text_mm1x2qk2",
+  secondaryInsurance: "color_mm241kqp",
+  memberId2: "text_mm1xaccx",
+  
+  // Referral/Product info (read-only)
+  serving: "color_mm1w1cm9",
+  pumpType: "color_mm1wjjtk",
+  cgmType: "color_mm1w7pmf",
+  requestType: "color_mm1w1978",
+  doctorName: "text_mm1x46et",
+  diagnosis: "color_mm1wf7rv",
+  notes: "long_text_mm2ffsme",
+  
+  // Welcome Call editable fields
+  monitorQty: "numeric_mm1xyfhc",
+  pumpQty: "numeric_mm1xa0z2",
+  qtyInf1: "numeric_mm1xv7wr",
+  infusionSet1: "color_mm1x9paw",
+  qtyInf2: "numeric_mm1xkq3b",
+  infusionSet2: "color_mm1xekaz",
+  subscriptionType: "color_mm1xbqth",
+  welcomeCallText: "color_mm1xtqvv",
+  orderHandling: "color_mm2776fg",
+  
+  // Stage
+  stageAdvancer: "color_mm1ws96t",
 } as const;
 
-// TODO: Add column IDs to read from Monday
-export const READ_COLUMN_IDS: string[] = [];
+export const READ_COLUMN_IDS = [
+  COL.dob, COL.phone, COL.email, COL.address, COL.gender,
+  COL.primaryInsurance, COL.memberId1, COL.secondaryInsurance, COL.memberId2,
+  COL.serving, COL.pumpType, COL.cgmType, COL.requestType, COL.doctorName,
+  COL.diagnosis, COL.notes,
+  COL.monitorQty, COL.pumpQty, COL.qtyInf1, COL.infusionSet1,
+  COL.qtyInf2, COL.infusionSet2, COL.subscriptionType, COL.welcomeCallText,
+  COL.orderHandling,
+];
 
 export interface MondayColumnValue {
   id: string;
@@ -66,7 +107,7 @@ async function gql<T>(query: string, variables: Record<string, unknown> = {}): P
   return json.data as T;
 }
 
-export async function fetchGroupItems(groupId: string = GROUPS.default): Promise<MondayItem[]> {
+export async function fetchGroupItems(groupId: string = GROUPS.welcomeCall): Promise<MondayItem[]> {
   const query = `
     query ($boardId: ID!, $cols: [String!]) {
       boards(ids: [$boardId]) {
@@ -135,5 +176,39 @@ export async function writeDropdownIds(itemId: string, columnId: string, ids: nu
     itemId,
     columnId,
     value: JSON.stringify({ ids }),
+  });
+}
+
+/**
+ * Write a number column.
+ */
+export async function writeNumber(itemId: string, columnId: string, num: number): Promise<void> {
+  const query = `
+    mutation ($boardId: ID!, $itemId: ID!, $columnId: String!, $value: JSON!) {
+      change_column_value(board_id: $boardId, item_id: $itemId, column_id: $columnId, value: $value) { id }
+    }
+  `;
+  await gql(query, {
+    boardId: BOARD_ID,
+    itemId,
+    columnId,
+    value: JSON.stringify(String(num)),
+  });
+}
+
+/**
+ * Write a location column.
+ */
+export async function writeLocation(itemId: string, columnId: string, address: string): Promise<void> {
+  const query = `
+    mutation ($boardId: ID!, $itemId: ID!, $columnId: String!, $value: JSON!) {
+      change_column_value(board_id: $boardId, item_id: $itemId, column_id: $columnId, value: $value) { id }
+    }
+  `;
+  await gql(query, {
+    boardId: BOARD_ID,
+    itemId,
+    columnId,
+    value: JSON.stringify({ address, lat: 0, lng: 0 }),
   });
 }

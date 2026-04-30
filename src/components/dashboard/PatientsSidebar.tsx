@@ -35,7 +35,9 @@ export function PatientsSidebar({ patients, selectedId, onSelect, loading, error
         <div className="flex items-center justify-between gap-2">
           {!collapsed && (
             <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Monday · Patients</p>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                Monday · Welcome Call
+              </p>
               <p className="text-sm font-semibold truncate">Patients ({patients.length})</p>
             </div>
           )}
@@ -79,7 +81,9 @@ export function PatientsSidebar({ patients, selectedId, onSelect, loading, error
                       <div className="min-w-0 text-left">
                         <p className="text-sm font-medium truncate">{p.name}</p>
                         <p className="text-[11px] text-muted-foreground truncate">
-                          {p.receivedAt ? new Date(p.receivedAt).toLocaleDateString() : "—"}
+                          {p.serving && p.primaryInsurance
+                            ? `${p.serving} · ${p.primaryInsurance}`
+                            : p.serving || p.primaryInsurance || "—"}
                         </p>
                       </div>
                     )}
