@@ -1,31 +1,41 @@
 import type { Patient } from "@/lib/workflow";
 import { Card } from "@/components/ui/card";
+import type { ReactNode } from "react";
 
 interface Props {
   patient: Patient;
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  // Filter out null/undefined children (fields that were skipped)
+  const filtered = Array.isArray(children)
+    ? children.filter(Boolean)
+    : children
+      ? [children]
+      : [];
+  if (filtered.length === 0) return null;
+
   return (
     <div className="mb-6">
       <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground mb-3">
         {title}
       </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-        {children}
+        {filtered}
       </div>
     </div>
   );
 }
 
 function Field({ label, value }: { label: string; value: string }) {
+  if (!value) return null;
   return (
     <div>
       <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
         {label}
       </p>
-      <p className="text-sm font-medium" title={value || "—"}>
-        {value || "—"}
+      <p className="text-sm font-medium" title={value}>
+        {value}
       </p>
     </div>
   );
@@ -67,14 +77,12 @@ export function PatientInfoCard({ patient }: Props) {
         </Section>
 
         {patient.notes && (
-          <Section title="Notes">
-            <div className="col-span-full">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">
-                Prior Notes
-              </p>
-              <p className="text-sm whitespace-pre-wrap">{patient.notes}</p>
-            </div>
-          </Section>
+          <div className="mb-6">
+            <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground mb-3">
+              Notes
+            </h3>
+            <p className="text-sm whitespace-pre-wrap">{patient.notes}</p>
+          </div>
         )}
       </div>
     </Card>
