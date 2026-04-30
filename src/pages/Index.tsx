@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { RotateCcw, ClipboardCheck } from "lucide-react";
 import { toast } from "sonner";
-import { sendPatientToMonday, escalatePatient } from "@/lib/mondayWrite";
+import { sendPatientToMonday } from "@/lib/mondayWrite";
 
 const Index = () => {
   const { patients, loading, error, refetch, update, clearOverlay } = useMondayPatients();
@@ -30,6 +30,11 @@ const Index = () => {
   const handleFieldChange = (field: keyof Patient, value: string | number | null) => {
     if (!selected) return;
     update(selected.id, { [field]: value } as Partial<Patient>);
+  };
+
+  const toggleEscalate = () => {
+    if (!selected) return;
+    update(selected.id, { escalated: !selected.escalated });
   };
 
   const resetForNewPatient = () => {
@@ -51,6 +56,7 @@ const Index = () => {
       orderHandling: "",
       orderHandlingIndex: null,
       addressEdited: "",
+      escalated: false,
     } as Partial<Patient>);
     toast.success("Cleared local edits — refetching from Monday");
     refetch();
@@ -66,20 +72,6 @@ const Index = () => {
       refetch();
     } catch (e) {
       toast.error("Send to Monday failed", {
-        description: e instanceof Error ? e.message : String(e),
-      });
-      throw e;
-    }
-  };
-
-  const handleEscalate = async () => {
-    if (!selected) return;
-    try {
-      await escalatePatient(selected.id);
-      toast.success("Escalation sent to Monday");
-      refetch();
-    } catch (e) {
-      toast.error("Escalation failed", {
         description: e instanceof Error ? e.message : String(e),
       });
       throw e;
@@ -146,8 +138,13 @@ const Index = () => {
                   <PatientInfoCard patient={selected} />
                   <WelcomeCallForm patient={selected} onFieldChange={handleFieldChange} />
                   <ReviewPanel patient={selected} />
+
+                  <EscalateButton
+                    escalated={selected.escalated}
+                    onToggle={toggleEscalate}
+                    disabled={!selected}
+                  />
                   <SendToMondayButton onSend={handleSend} disabled={!selected} />
-                  <EscalateButton onEscalate={handleEscalate} disabled={!selected} />
                 </>
               )}
             </section>

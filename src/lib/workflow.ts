@@ -40,6 +40,7 @@ export interface Patient {
   orderHandling: string;
   orderHandlingIndex: number | null;
   addressEdited: string; // local edit of address
+  escalated: boolean;
   receivedAt: string;
   lastUpdated: string;
 }

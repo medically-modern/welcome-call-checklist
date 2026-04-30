@@ -22,11 +22,13 @@ export async function sendPatientToMonday(p: Patient): Promise<void> {
 
   if (p.addressEdited) tasks.push(writeLocation(p.id, COL.address, p.addressEdited));
 
-  tasks.push(writeStatusIndex(p.id, COL.stageAdvancer, 4)); // Completed
+  // Escalation toggle — if flagged, write Escalation Required
+  if (p.escalated) {
+    tasks.push(writeStatusIndex(p.id, COL.escalation, 0)); // Escalation Required
+  }
+
+  // Stage advancer — Completed
+  tasks.push(writeStatusIndex(p.id, COL.stageAdvancer, 4));
 
   await Promise.all(tasks);
-}
-
-export async function escalatePatient(itemId: string): Promise<void> {
-  await writeStatusIndex(itemId, COL.escalation, 0); // Escalation Required
 }
