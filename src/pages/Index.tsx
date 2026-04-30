@@ -1,3 +1,4 @@
+import confetti from "canvas-confetti";
 import { useEffect, useMemo, useState } from "react";
 import { useMondayPatients } from "@/hooks/useMondayPatients";
 import type { Patient } from "@/lib/workflow";
@@ -60,6 +61,7 @@ const Index = () => {
     try {
       await sendPatientToMonday(selected);
       toast.success("Sent to Monday");
+      confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 } });
       clearOverlay(selected.id);
       refetch();
     } catch (e) {
