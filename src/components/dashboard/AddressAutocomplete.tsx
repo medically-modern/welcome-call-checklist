@@ -144,38 +144,59 @@ export function AddressAutocomplete({ value, onChange, placeholder }: Props) {
       pac.style.width = "100%";
       injectAutocompleteStyles();
 
-      pac.addEventListener("gmp-placeselect", async (evt: any) => {
-        console.log("gmp-placeselect fired", evt);
-        const place = evt.place ?? evt.detail?.place;
-        if (!place) {
-          console.warn("No place object in event", evt);
-          return;
+      // Helper: read the address text from the shadow DOM input
+      const readInputValue = (): string => {
+        const shadow = pac.shadowRoot;
+        if (shadow) {
+          const input = shadow.querySelector("input");
+          if (input?.value) return input.value;
         }
-        console.log("Place object:", place);
-        try {
-          await place.fetchFields({ fields: ["formattedAddress", "displayName"] });
-          const addr = place.formattedAddress || place.formatted_address || place.displayName || "";
-          console.log("Selected address:", addr);
-          onChange(addr);
-        } catch (err) {
-          console.warn("fetchFields failed, using fallback:", err);
-          const addr = place.formattedAddress || place.formatted_address || place.displayName || place.name || "";
-          onChange(addr);
-        }
-      });
+        return "";
+      };
 
-      // Also listen for gmp-select (alternate event name in some API versions)
-      pac.addEventListener("gmp-select", async (evt: any) => {
-        console.log("gmp-select fired", evt);
+      // Helper: try to extract address from the event's place object (minified props vary)
+      const extractAddress = async (evt: any): Promise<string> => {
+        // Try documented property names first
         const place = evt.place ?? evt.detail?.place;
-        if (!place) return;
-        try {
-          await place.fetchFields({ fields: ["formattedAddress", "displayName"] });
-          onChange(place.formattedAddress || place.formatted_address || place.displayName || "");
-        } catch {
-          onChange(place.formattedAddress || place.formatted_address || place.displayName || place.name || "");
+        if (place) {
+          try {
+            if (typeof place.fetchFields === "function") {
+              await place.fetchFields({ fields: ["formattedAddress"] });
+            }
+            const addr = place.formattedAddress || place.formatted_address || place.displayName || place.name;
+            if (addr) return addr;
+          } catch { /* fall through */ }
         }
-      });
+
+        // Walk all event properties looking for an object with toJSON or formattedAddress
+        for (const key of Object.keys(evt)) {
+          const val = evt[key];
+          if (val && typeof val === "object") {
+            try {
+              if (typeof val.fetchFields === "function") {
+                await val.fetchFields({ fields: ["formattedAddress"] });
+              }
+              if (val.formattedAddress) return val.formattedAddress;
+              if (typeof val.toJSON === "function") {
+                const j = val.toJSON();
+                if (j?.formattedAddress) return j.formattedAddress;
+              }
+            } catch { /* skip */ }
+          }
+        }
+
+        // Last resort: read from the input element directly
+        return readInputValue();
+      };
+
+      for (const evtName of ["gmp-placeselect", "gmp-select"]) {
+        pac.addEventListener(evtName, async (evt: any) => {
+          console.log(`${evtName} fired`, evt);
+          const addr = await extractAddress(evt);
+          console.log("Resolved address:", addr);
+          if (addr) onChange(addr);
+        });
+      }
 
       containerRef.current.appendChild(pac);
       pacRef.current = pac;
