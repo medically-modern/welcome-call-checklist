@@ -154,7 +154,16 @@ export function AddressAutocomplete({ value, onChange, placeholder }: Props) {
           // Small delay to ensure Google has populated pac.value
           setTimeout(() => {
             const addr = (pac as any).value || "";
-            if (addr) onChangeRef.current(addr);
+            console.log("[AddressAutocomplete] event fired, pac.value =", JSON.stringify(addr));
+            console.log("[AddressAutocomplete] onChangeRef.current =", onChangeRef.current);
+            if (addr) {
+              try {
+                onChangeRef.current(addr);
+                console.log("[AddressAutocomplete] onChange called successfully");
+              } catch (err) {
+                console.error("[AddressAutocomplete] onChange threw:", err);
+              }
+            }
           }, 50);
         });
       }

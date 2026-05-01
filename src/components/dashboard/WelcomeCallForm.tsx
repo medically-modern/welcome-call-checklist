@@ -237,7 +237,10 @@ export function WelcomeCallForm({ patient, onFieldChange }: Props) {
             </label>
             <AddressAutocomplete
               value={patient.addressEdited ?? ""}
-              onChange={(addr) => onFieldChange("addressEdited", addr)}
+              onChange={(addr) => {
+                console.log("[WelcomeCallForm] addressEdited onChange called with:", JSON.stringify(addr));
+                onFieldChange("addressEdited", addr);
+              }}
               placeholder="Search for a new address..."
             />
             {patient.addressEdited !== null && patient.addressEdited !== "" && patient.addressEdited !== patient.address && (
