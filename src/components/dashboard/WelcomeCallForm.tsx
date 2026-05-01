@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { AddressAutocomplete } from "@/components/dashboard/AddressAutocomplete";
 
 interface Props {
   patient: Patient;
@@ -217,15 +218,15 @@ export function WelcomeCallForm({ patient, onFieldChange }: Props) {
           </Select>
         </div>
 
-        {/* Address — full width */}
+        {/* Address — full width, Google Places autocomplete */}
         <div className="sm:col-span-2">
           <label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold block mb-2">
             Address
           </label>
-          <Input
+          <AddressAutocomplete
             value={patient.addressEdited !== null ? patient.addressEdited : patient.address}
-            onChange={(e) => onFieldChange("addressEdited", e.target.value)}
-            placeholder="Enter address"
+            onChange={(addr) => onFieldChange("addressEdited", addr)}
+            placeholder="Start typing an address..."
           />
           {patient.addressEdited !== null && patient.addressEdited !== patient.address && (
             <p className="text-xs text-amber-600 mt-1">Address has been edited</p>
