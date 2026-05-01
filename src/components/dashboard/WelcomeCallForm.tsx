@@ -37,6 +37,11 @@ function SectionHeading({ number, title }: { number: number; title: string }) {
   );
 }
 
+function hasZipCode(address: string): boolean {
+  if (!address) return true; // no address = no warning
+  return /\b\d{5}(-\d{4})?\b/.test(address);
+}
+
 export function WelcomeCallForm({ patient, onFieldChange }: Props) {
   const handleSelectChange = (field: string, value: string, index: number | null) => {
     onFieldChange(field as keyof Patient, value);
@@ -296,6 +301,9 @@ export function WelcomeCallForm({ patient, onFieldChange }: Props) {
             <p className="text-sm font-medium px-3 py-2 rounded-md bg-muted/50 border border-input min-h-[40px] flex items-center">
               {patient.address || <span className="text-muted-foreground italic">No address on file</span>}
             </p>
+            {patient.address && !hasZipCode(patient.address) && (
+              <p className="text-xs text-red-600 font-semibold mt-1">Zip code needs to be added!</p>
+            )}
           </div>
 
           {/* Google Places autocomplete for editing */}
@@ -312,7 +320,10 @@ export function WelcomeCallForm({ patient, onFieldChange }: Props) {
               }}
               placeholder="Search for a new address..."
             />
-            {patient.addressEdited !== null && patient.addressEdited !== "" && patient.addressEdited !== patient.address && (
+            {patient.addressEdited !== null && patient.addressEdited !== "" && !hasZipCode(patient.addressEdited) && (
+              <p className="text-xs text-red-600 font-semibold mt-1">Zip code needs to be added!</p>
+            )}
+            {patient.addressEdited !== null && patient.addressEdited !== "" && hasZipCode(patient.addressEdited) && patient.addressEdited !== patient.address && (
               <p className="text-xs text-amber-600 mt-1">Address will be updated on sync</p>
             )}
           </div>
