@@ -70,8 +70,11 @@ export function mondayItemToPatient(item: MondayItem): Patient {
     orderHandling: txt(COL.orderHandling),
     orderHandlingIndex: statusIndex(COL.orderHandling),
     addressEdited: null,
+    addressLat: null,
+    addressLng: null,
     escalated: false,
     receivedAt: new Date().toISOString(),
     lastUpdated: new Date().toISOString(),
   };
 }
+

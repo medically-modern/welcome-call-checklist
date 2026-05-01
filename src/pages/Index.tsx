@@ -56,6 +56,8 @@ const Index = () => {
       orderHandling: "",
       orderHandlingIndex: null,
       addressEdited: null,
+      addressLat: null,
+      addressLng: null,
       escalated: false,
     } as Partial<Patient>);
     toast.success("Cleared local edits — refetching from Monday");
@@ -156,3 +158,4 @@ const Index = () => {
 };
 
 export default Index;
+

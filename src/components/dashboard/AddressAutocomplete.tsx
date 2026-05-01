@@ -32,11 +32,9 @@ function injectAutocompleteStyles() {
 
 /**
  * Google's inline bootstrap loader — this is the ONLY way to get
- * `google.maps.importLibrary()` to work.  The classic <script src="...">
- * tag loads the legacy SDK which does NOT expose importLibrary.
+ * `google.maps.importLibrary()` to work.
  */
 function installBootstrapLoader(key: string) {
-  // If the bootstrap was already installed (or someone else loaded Maps), skip.
   if ((window as any).google?.maps?.importLibrary) return;
 
   const g: Record<string, string> = { key, v: "weekly" };
@@ -91,11 +89,11 @@ async function loadGooglePlaces(): Promise<void> {
     return;
   }
 
-  // Install the bootstrap loader so importLibrary() is available
   installBootstrapLoader(key);
 
   try {
     await google.maps.importLibrary("places");
+    await google.maps.importLibrary("geocoding");
     mapsLoaded = true;
     mapsLoading = false;
     loadCallbacks.forEach((cb) => cb());
@@ -106,9 +104,30 @@ async function loadGooglePlaces(): Promise<void> {
   }
 }
 
+/** Geocode an address string to lat/lng using the Maps Geocoder */
+async function geocodeAddress(address: string): Promise<{ lat: number; lng: number }> {
+  try {
+    const geocoder = new google.maps.Geocoder();
+    const result = await geocoder.geocode({ address });
+    if (result.results?.[0]?.geometry?.location) {
+      const loc = result.results[0].geometry.location;
+      return { lat: loc.lat(), lng: loc.lng() };
+    }
+  } catch (err) {
+    console.warn("Geocoding failed:", err);
+  }
+  return { lat: 0, lng: 0 };
+}
+
+export interface AddressResult {
+  address: string;
+  lat: number;
+  lng: number;
+}
+
 interface Props {
   value: string;
-  onChange: (address: string) => void;
+  onChange: (result: AddressResult) => void;
   placeholder?: string;
 }
 
@@ -132,14 +151,13 @@ export function AddressAutocomplete({ value, onChange, placeholder }: Props) {
     if (!ready || !containerRef.current || pacRef.current) {
       return;
     }
-    // Verify the Places library actually loaded
     if (!(window as any).google?.maps?.places?.PlaceAutocompleteElement) {
       setFallback(true);
       return;
     }
 
     try {
-      // @ts-ignore — PlaceAutocompleteElement is new and types may lag
+      // @ts-ignore
       const pac = new google.maps.places.PlaceAutocompleteElement({
         componentRestrictions: { country: "us" },
         types: ["address"],
@@ -148,22 +166,16 @@ export function AddressAutocomplete({ value, onChange, placeholder }: Props) {
       pac.style.width = "100%";
       injectAutocompleteStyles();
 
-      // Listen for place selection — pac.value holds the formatted address
+      // Listen for place selection — pac.value has the address string
       for (const evtName of ["gmp-placeselect", "gmp-select"]) {
         pac.addEventListener(evtName, () => {
-          // Small delay to ensure Google has populated pac.value
-          setTimeout(() => {
+          setTimeout(async () => {
             const addr = (pac as any).value || "";
-            console.log("[AddressAutocomplete] event fired, pac.value =", JSON.stringify(addr));
-            console.log("[AddressAutocomplete] onChangeRef.current =", onChangeRef.current);
-            if (addr) {
-              try {
-                onChangeRef.current(addr);
-                console.log("[AddressAutocomplete] onChange called successfully");
-              } catch (err) {
-                console.error("[AddressAutocomplete] onChange threw:", err);
-              }
-            }
+            if (!addr) return;
+            // Geocode to get lat/lng for Monday's location column
+            const coords = await geocodeAddress(addr);
+            console.log("[AddressAutocomplete] selected:", addr, coords);
+            onChangeRef.current({ address: addr, lat: coords.lat, lng: coords.lng });
           }, 50);
         });
       }
@@ -183,7 +195,6 @@ export function AddressAutocomplete({ value, onChange, placeholder }: Props) {
           shadow.appendChild(s);
         }
       };
-      // Try immediately, and again after a short delay (shadow may not be ready)
       applyShadowStyles();
       setTimeout(applyShadowStyles, 100);
       setTimeout(applyShadowStyles, 500);
@@ -205,7 +216,7 @@ export function AddressAutocomplete({ value, onChange, placeholder }: Props) {
       <input
         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange({ address: e.target.value, lat: 0, lng: 0 })}
         placeholder={placeholder ?? "Enter address"}
       />
     );

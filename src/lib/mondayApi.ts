@@ -200,7 +200,7 @@ export async function writeNumber(itemId: string, columnId: string, num: number)
 /**
  * Write a location column.
  */
-export async function writeLocation(itemId: string, columnId: string, address: string): Promise<void> {
+export async function writeLocation(itemId: string, columnId: string, address: string, lat: number = 0, lng: number = 0): Promise<void> {
   const query = `
     mutation ($boardId: ID!, $itemId: ID!, $columnId: String!, $value: JSON!) {
       change_column_value(board_id: $boardId, item_id: $itemId, column_id: $columnId, value: $value) { id }
@@ -210,6 +210,7 @@ export async function writeLocation(itemId: string, columnId: string, address: s
     boardId: BOARD_ID,
     itemId,
     columnId,
-    value: JSON.stringify({ address, lat: 0, lng: 0 }),
+    value: JSON.stringify({ address, lat, lng }),
   });
 }
+

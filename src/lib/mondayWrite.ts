@@ -20,7 +20,11 @@ export async function sendPatientToMonday(p: Patient): Promise<void> {
   if (p.orderHandlingIndex !== null)
     tasks.push(writeStatusIndex(p.id, COL.orderHandling, p.orderHandlingIndex));
 
-  if (p.addressEdited !== null) tasks.push(writeLocation(p.id, COL.address, p.addressEdited));
+  if (p.addressEdited !== null) {
+    const lat = p.addressLat ?? 0;
+    const lng = p.addressLng ?? 0;
+    tasks.push(writeLocation(p.id, COL.address, p.addressEdited, lat, lng));
+  }
 
   // Escalation toggle — if flagged, write Escalation Required
   if (p.escalated) {
@@ -32,3 +36,4 @@ export async function sendPatientToMonday(p: Patient): Promise<void> {
 
   await Promise.all(tasks);
 }
+

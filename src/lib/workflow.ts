@@ -40,6 +40,8 @@ export interface Patient {
   orderHandling: string;
   orderHandlingIndex: number | null;
   addressEdited: string | null; // local edit of address
+  addressLat: number | null;    // lat from Google Places geocode
+  addressLng: number | null;    // lng from Google Places geocode
   escalated: boolean;
   receivedAt: string;
   lastUpdated: string;
@@ -107,3 +109,4 @@ export const ORDER_HANDLING_OPTIONS = [
   { index: 1, label: 'Together' },
   { index: 2, label: 'Not Applicable' },
 ];
+

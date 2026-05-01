@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AddressAutocomplete } from "@/components/dashboard/AddressAutocomplete";
+import { AddressAutocomplete, type AddressResult } from "@/components/dashboard/AddressAutocomplete";
 
 interface Props {
   patient: Patient;
@@ -237,9 +237,10 @@ export function WelcomeCallForm({ patient, onFieldChange }: Props) {
             </label>
             <AddressAutocomplete
               value={patient.addressEdited ?? ""}
-              onChange={(addr) => {
-                console.log("[WelcomeCallForm] addressEdited onChange called with:", JSON.stringify(addr));
-                onFieldChange("addressEdited", addr);
+              onChange={(result: AddressResult) => {
+                onFieldChange("addressEdited", result.address);
+                onFieldChange("addressLat" as keyof Patient, result.lat);
+                onFieldChange("addressLng" as keyof Patient, result.lng);
               }}
               placeholder="Search for a new address..."
             />
