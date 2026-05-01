@@ -115,8 +115,12 @@ interface Props {
 export function AddressAutocomplete({ value, onChange, placeholder }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const pacRef = useRef<HTMLElement | null>(null);
+  const onChangeRef = useRef(onChange);
   const [ready, setReady] = useState(mapsLoaded);
   const [fallback, setFallback] = useState(false);
+
+  // Keep the ref current so event listeners always call the latest onChange
+  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
 
   useEffect(() => {
     loadGooglePlaces()
@@ -144,78 +148,13 @@ export function AddressAutocomplete({ value, onChange, placeholder }: Props) {
       pac.style.width = "100%";
       injectAutocompleteStyles();
 
-      // Deep debug: log everything we can find about the element and event
-      const findAddress = (evt: any): string => {
-        // 1. Try reading from the element's shadow DOM
-        const shadow = pac.shadowRoot;
-        console.log("Shadow root:", shadow);
-        if (shadow) {
-          // Try input
-          const input = shadow.querySelector("input");
-          console.log("Shadow input:", input, "value:", input?.value);
-          if (input?.value) return input.value;
-
-          // Try any element with text content that looks like an address
-          const allEls = shadow.querySelectorAll("*");
-          console.log("Shadow DOM elements:", allEls.length);
-          allEls.forEach((el: any) => {
-            if (el.value) console.log("  element with value:", el.tagName, el.value);
-            if (el.textContent?.includes(",")) console.log("  element with text:", el.tagName, el.textContent?.trim());
-          });
-        }
-
-        // 2. Try the pac element itself
-        console.log("pac.value:", (pac as any).value);
-        console.log("pac.innerText:", pac.innerText);
-        console.log("pac.textContent:", pac.textContent);
-        if ((pac as any).value) return (pac as any).value;
-
-        // 3. Walk event properties deeply
-        const evtKeys = Object.getOwnPropertyNames(evt);
-        console.log("Event own props:", evtKeys);
-        for (const key of evtKeys) {
-          try {
-            const val = evt[key];
-            if (val && typeof val === "object" && val !== evt.target && val !== evt.currentTarget) {
-              const valKeys = Object.getOwnPropertyNames(val);
-              console.log(`  evt.${key} props:`, valKeys);
-              // Look for string properties that look like addresses
-              for (const vk of valKeys) {
-                try {
-                  const inner = val[vk];
-                  if (typeof inner === "string" && inner.includes(",") && inner.length > 5) {
-                    console.log(`  evt.${key}.${vk} = "${inner}"`);
-                    return inner;
-                  }
-                } catch {}
-              }
-              // Try toJSON
-              if (typeof val.toJSON === "function") {
-                const j = val.toJSON();
-                console.log(`  evt.${key}.toJSON():`, j);
-                if (j?.formattedAddress) return j.formattedAddress;
-                if (j?.formatted_address) return j.formatted_address;
-              }
-              // Try fetchFields
-              if (typeof val.fetchFields === "function") {
-                console.log(`  evt.${key} has fetchFields`);
-              }
-            }
-          } catch {}
-        }
-
-        return "";
-      };
-
+      // Listen for place selection — pac.value holds the formatted address
       for (const evtName of ["gmp-placeselect", "gmp-select"]) {
-        pac.addEventListener(evtName, (evt: any) => {
-          console.log(`${evtName} fired`, evt);
-
-          // Small delay to let Google populate the input
+        pac.addEventListener(evtName, () => {
+          // Small delay to ensure Google has populated pac.value
           setTimeout(() => {
-            const addr = findAddress(evt);
-            console.log("Resolved address:", addr);
-            if (addr) onChange(addr);
+            const addr = (pac as any).value || "";
+            if (addr) onChangeRef.current(addr);
           }, 50);
         });
       }
