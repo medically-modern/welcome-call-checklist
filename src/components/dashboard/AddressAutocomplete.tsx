@@ -112,6 +112,11 @@ export function AddressAutocomplete({ value, onChange, placeholder }: Props) {
 
       if (!addr) return;
 
+      // Update the input to show the full address with zip
+      if (inputRef.current) {
+        inputRef.current.value = addr;
+      }
+
       let lat = 0;
       let lng = 0;
       if (place.geometry?.location) {
