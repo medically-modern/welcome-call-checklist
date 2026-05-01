@@ -1,6 +1,7 @@
 import type { Patient } from "@/lib/workflow";
 import { SECONDARY_INSURANCE_OPTIONS } from "@/lib/workflow";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -30,6 +31,7 @@ function Field({ label, value }: { label: string; value: string }) {
 
 export function PatientInfoCard({ patient, onFieldChange }: Props) {
   const hasSecondaryInsurance = !!patient.secondaryInsurance && patient.secondaryInsurance !== "";
+  const hasMemberId2 = !!patient.memberId2 && patient.memberId2 !== "";
 
   return (
     <div className="space-y-4">
@@ -98,7 +100,26 @@ export function PatientInfoCard({ patient, onFieldChange }: Props) {
               </div>
             )}
 
-            <Field label="Member ID 2" value={patient.memberId2} />
+            {/* Member ID 2: read-only if present, editable text input if empty */}
+            {hasMemberId2 ? (
+              <Field label="Member ID 2" value={patient.memberId2} />
+            ) : (
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+                  Member ID 2
+                </p>
+                <Input
+                  className="h-8 text-sm"
+                  value={patient.memberId2Edited ?? ""}
+                  onChange={(e) => {
+                    if (onFieldChange) {
+                      onFieldChange("memberId2Edited", e.target.value);
+                    }
+                  }}
+                  placeholder="Enter member ID"
+                />
+              </div>
+            )}
           </div>
         </Card>
       </div>

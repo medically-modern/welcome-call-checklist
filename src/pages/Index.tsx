@@ -44,6 +44,7 @@ const Index = () => {
       cgmTypeIndex: null,
       secondaryInsuranceEdited: null,
       secondaryInsuranceIndex: null,
+      memberId2Edited: null,
       monitorQty: "",
       pumpQty: "",
       qtyInf1: "",

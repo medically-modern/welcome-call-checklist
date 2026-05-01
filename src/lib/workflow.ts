@@ -25,9 +25,10 @@ export interface Patient {
   doctorName: string;
   diagnosis: string;
   notes: string;
-  // Secondary insurance (editable when empty)
+  // Secondary insurance & member ID 2 (editable when empty)
   secondaryInsuranceIndex: number | null;
   secondaryInsuranceEdited: string | null;
+  memberId2Edited: string | null;
   // Editable welcome call fields
   monitorQty: string;
   pumpQty: string;

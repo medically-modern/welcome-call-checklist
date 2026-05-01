@@ -198,6 +198,23 @@ export async function writeNumber(itemId: string, columnId: string, num: number)
 }
 
 /**
+ * Write a text column.
+ */
+export async function writeText(itemId: string, columnId: string, text: string): Promise<void> {
+  const query = `
+    mutation ($boardId: ID!, $itemId: ID!, $columnId: String!, $value: JSON!) {
+      change_column_value(board_id: $boardId, item_id: $itemId, column_id: $columnId, value: $value) { id }
+    }
+  `;
+  await gql(query, {
+    boardId: BOARD_ID,
+    itemId,
+    columnId,
+    value: JSON.stringify(text),
+  });
+}
+
+/**
  * Write a location column.
  */
 export async function writeLocation(itemId: string, columnId: string, address: string, lat: number = 0, lng: number = 0): Promise<void> {

@@ -1,4 +1,4 @@
-import { writeStatusIndex, writeNumber, writeLocation, COL } from "./mondayApi";
+import { writeStatusIndex, writeNumber, writeLocation, writeText, COL } from "./mondayApi";
 import type { Patient } from "./workflow";
 
 export async function sendPatientToMonday(p: Patient): Promise<void> {
@@ -11,6 +11,10 @@ export async function sendPatientToMonday(p: Patient): Promise<void> {
   // Secondary Insurance (only if edited)
   if (p.secondaryInsuranceEdited !== null && p.secondaryInsuranceIndex !== null)
     tasks.push(writeStatusIndex(p.id, COL.secondaryInsurance, p.secondaryInsuranceIndex));
+
+  // Member ID 2 (only if edited)
+  if (p.memberId2Edited !== null && p.memberId2Edited !== "")
+    tasks.push(writeText(p.id, COL.memberId2, p.memberId2Edited));
 
   if (p.monitorQty) tasks.push(writeNumber(p.id, COL.monitorQty, Number(p.monitorQty)));
   if (p.pumpQty) tasks.push(writeNumber(p.id, COL.pumpQty, Number(p.pumpQty)));

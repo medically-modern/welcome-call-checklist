@@ -36,6 +36,11 @@ export function ReviewPanel({ patient }: Props) {
       patient.secondaryInsuranceEdited || patient.secondaryInsurance,
       !!(patient.secondaryInsuranceEdited || patient.secondaryInsurance),
     ],
+    [
+      "Member ID 2",
+      patient.memberId2Edited || patient.memberId2,
+      !!(patient.memberId2Edited || patient.memberId2),
+    ],
   ];
 
   const filledCount = filledFields.filter(([, , filled]) => filled).length;
