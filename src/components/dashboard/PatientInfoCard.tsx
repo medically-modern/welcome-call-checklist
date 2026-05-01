@@ -35,12 +35,24 @@ export function PatientInfoCard({ patient, onFieldChange }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Patient name */}
-      <Card className="p-4">
-        <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">
-          Patient Name
-        </p>
-        <p className="text-lg font-semibold">{patient.name}</p>
+      {/* Patient name + phone */}
+      <Card className="p-4 flex items-center justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+            Patient Name
+          </p>
+          <p className="text-lg font-semibold">{patient.name}</p>
+        </div>
+        {patient.phone && (
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+              Phone
+            </p>
+            <a href={`tel:${patient.phone}`} className="text-sm font-medium text-primary hover:underline">
+              {patient.phone}
+            </a>
+          </div>
+        )}
       </Card>
 
       {/* Row 1: Referral/Product + Insurance */}
