@@ -3,6 +3,28 @@ import { useEffect, useRef, useState } from "react";
 let mapsLoaded = false;
 let mapsLoading = false;
 const loadCallbacks: (() => void)[] = [];
+let styleInjected = false;
+
+/** Inject a <style> that forces the Google autocomplete element to be white */
+function injectAutocompleteStyles() {
+  if (styleInjected) return;
+  styleInjected = true;
+  const style = document.createElement("style");
+  style.textContent = `
+    gmp-place-autocomplete {
+      background-color: white !important;
+      border: 1px solid hsl(var(--input)) !important;
+      border-radius: 0.375rem !important;
+      height: 40px !important;
+      font-size: 0.875rem !important;
+    }
+    gmp-place-autocomplete input {
+      background-color: white !important;
+      color: #111 !important;
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 /**
  * Google's inline bootstrap loader — this is the ONLY way to get
@@ -116,6 +138,7 @@ export function AddressAutocomplete({ value, onChange, placeholder }: Props) {
       });
 
       pac.style.width = "100%";
+      injectAutocompleteStyles();
 
       pac.addEventListener("gmp-placeselect", async (evt: any) => {
         const place = evt.place;

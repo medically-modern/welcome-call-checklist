@@ -218,19 +218,32 @@ export function WelcomeCallForm({ patient, onFieldChange }: Props) {
           </Select>
         </div>
 
-        {/* Address — full width, Google Places autocomplete */}
-        <div className="sm:col-span-2">
-          <label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold block mb-2">
-            Address
-          </label>
-          <AddressAutocomplete
-            value={patient.addressEdited !== null ? patient.addressEdited : patient.address}
-            onChange={(addr) => onFieldChange("addressEdited", addr)}
-            placeholder="Start typing an address..."
-          />
-          {patient.addressEdited !== null && patient.addressEdited !== patient.address && (
-            <p className="text-xs text-amber-600 mt-1">Address has been edited</p>
-          )}
+        {/* Address — full width */}
+        <div className="sm:col-span-2 space-y-3">
+          {/* Current Monday address (read-only) */}
+          <div>
+            <label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold block mb-1">
+              Address on File
+            </label>
+            <p className="text-sm font-medium px-3 py-2 rounded-md bg-muted/50 border border-input min-h-[40px] flex items-center">
+              {patient.address || <span className="text-muted-foreground italic">No address on file</span>}
+            </p>
+          </div>
+
+          {/* Google Places autocomplete for editing */}
+          <div>
+            <label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold block mb-1">
+              Update Address
+            </label>
+            <AddressAutocomplete
+              value={patient.addressEdited ?? ""}
+              onChange={(addr) => onFieldChange("addressEdited", addr)}
+              placeholder="Search for a new address..."
+            />
+            {patient.addressEdited !== null && patient.addressEdited !== "" && patient.addressEdited !== patient.address && (
+              <p className="text-xs text-amber-600 mt-1">Address will be updated on sync</p>
+            )}
+          </div>
         </div>
       </div>
     </Card>
