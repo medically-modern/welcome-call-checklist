@@ -145,14 +145,35 @@ export function AddressAutocomplete({ value, onChange, placeholder }: Props) {
       injectAutocompleteStyles();
 
       pac.addEventListener("gmp-placeselect", async (evt: any) => {
-        const place = evt.place;
+        console.log("gmp-placeselect fired", evt);
+        const place = evt.place ?? evt.detail?.place;
+        if (!place) {
+          console.warn("No place object in event", evt);
+          return;
+        }
+        console.log("Place object:", place);
+        try {
+          await place.fetchFields({ fields: ["formattedAddress", "displayName"] });
+          const addr = place.formattedAddress || place.formatted_address || place.displayName || "";
+          console.log("Selected address:", addr);
+          onChange(addr);
+        } catch (err) {
+          console.warn("fetchFields failed, using fallback:", err);
+          const addr = place.formattedAddress || place.formatted_address || place.displayName || place.name || "";
+          onChange(addr);
+        }
+      });
+
+      // Also listen for gmp-select (alternate event name in some API versions)
+      pac.addEventListener("gmp-select", async (evt: any) => {
+        console.log("gmp-select fired", evt);
+        const place = evt.place ?? evt.detail?.place;
         if (!place) return;
         try {
-          await place.fetchFields({ fields: ["formattedAddress"] });
-          onChange(place.formattedAddress ?? "");
+          await place.fetchFields({ fields: ["formattedAddress", "displayName"] });
+          onChange(place.formattedAddress || place.formatted_address || place.displayName || "");
         } catch {
-          // If fetchFields fails, try displayName
-          onChange(place.displayName ?? "");
+          onChange(place.formattedAddress || place.formatted_address || place.displayName || place.name || "");
         }
       });
 
