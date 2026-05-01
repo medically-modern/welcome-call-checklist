@@ -2,44 +2,49 @@ import { useEffect, useRef, useState } from "react";
 
 let mapsLoaded = false;
 let mapsLoading = false;
+let placesLib: google.maps.PlacesLibrary | null = null;
 const loadCallbacks: (() => void)[] = [];
 
-function loadGoogleMaps(): Promise<void> {
-  if (mapsLoaded) return Promise.resolve();
-  return new Promise((resolve) => {
-    if (mapsLoading) {
-      loadCallbacks.push(resolve);
-      return;
-    }
-    mapsLoading = true;
-    loadCallbacks.push(resolve);
+async function loadGooglePlaces(): Promise<void> {
+  if (mapsLoaded) return;
 
-    const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
-    if (!key) {
-      console.warn("VITE_GOOGLE_MAPS_API_KEY is not set — address autocomplete disabled");
-      mapsLoading = false;
-      loadCallbacks.forEach((cb) => cb());
-      loadCallbacks.length = 0;
-      return;
-    }
+  if (mapsLoading) {
+    return new Promise((resolve) => { loadCallbacks.push(resolve); });
+  }
 
-    const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&loading=async`;
-    script.async = true;
-    script.onload = () => {
-      mapsLoaded = true;
-      mapsLoading = false;
-      loadCallbacks.forEach((cb) => cb());
-      loadCallbacks.length = 0;
-    };
-    script.onerror = () => {
-      console.error("Failed to load Google Maps JS SDK");
-      mapsLoading = false;
-      loadCallbacks.forEach((cb) => cb());
-      loadCallbacks.length = 0;
-    };
-    document.head.appendChild(script);
-  });
+  mapsLoading = true;
+
+  const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
+  if (!key) {
+    console.warn("VITE_GOOGLE_MAPS_API_KEY is not set — address autocomplete disabled");
+    mapsLoading = false;
+    return;
+  }
+
+  // Load the Maps JS SDK using the inline bootstrap loader (recommended by Google)
+  // @ts-ignore
+  if (!window.google?.maps) {
+    await new Promise<void>((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&loading=async`;
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error("Failed to load Google Maps SDK"));
+      document.head.appendChild(script);
+    });
+  }
+
+  // Import the places library using the new importLibrary pattern
+  try {
+    placesLib = await google.maps.importLibrary("places") as google.maps.PlacesLibrary;
+    mapsLoaded = true;
+    mapsLoading = false;
+    loadCallbacks.forEach((cb) => cb());
+    loadCallbacks.length = 0;
+  } catch (err) {
+    console.error("Failed to load Google Places library:", err);
+    mapsLoading = false;
+  }
 }
 
 interface Props {
@@ -50,62 +55,58 @@ interface Props {
 
 export function AddressAutocomplete({ value, onChange, placeholder }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const elementRef = useRef<google.maps.places.PlaceAutocompleteElement | null>(null);
+  const pacRef = useRef<HTMLElement | null>(null);
   const [ready, setReady] = useState(mapsLoaded);
   const [fallback, setFallback] = useState(false);
 
   useEffect(() => {
-    loadGoogleMaps().then(() => setReady(true));
+    loadGooglePlaces()
+      .then(() => setReady(true))
+      .catch(() => setFallback(true));
   }, []);
 
   useEffect(() => {
-    if (!ready || !containerRef.current || elementRef.current) return;
-
-    // Check if the new PlaceAutocompleteElement API is available
-    if (!window.google?.maps?.places?.PlaceAutocompleteElement) {
-      console.warn("PlaceAutocompleteElement not available, falling back to text input");
-      setFallback(true);
+    if (!ready || !containerRef.current || pacRef.current || !placesLib) {
+      if (ready && !placesLib) setFallback(true);
       return;
     }
 
     try {
-      const pac = new google.maps.places.PlaceAutocompleteElement({
+      // @ts-ignore — PlaceAutocompleteElement is new and types may lag
+      const pac = new placesLib.PlaceAutocompleteElement({
         componentRestrictions: { country: "us" },
         types: ["address"],
       });
 
-      // Style the element to match the rest of the form
       pac.style.width = "100%";
 
       pac.addEventListener("gmp-placeselect", async (evt: any) => {
         const place = evt.place;
         if (!place) return;
-
-        // Fetch full details including formatted address
-        await place.fetchFields({ fields: ["formattedAddress", "location", "id", "addressComponents"] });
-
-        const addr = place.formattedAddress ?? "";
-        onChange(addr);
+        try {
+          await place.fetchFields({ fields: ["formattedAddress"] });
+          onChange(place.formattedAddress ?? "");
+        } catch {
+          // If fetchFields fails, try displayName
+          onChange(place.displayName ?? "");
+        }
       });
 
       containerRef.current.appendChild(pac);
-      elementRef.current = pac;
+      pacRef.current = pac;
     } catch (err) {
       console.error("Failed to create PlaceAutocompleteElement:", err);
       setFallback(true);
     }
 
     return () => {
-      if (elementRef.current && containerRef.current) {
-        try {
-          containerRef.current.removeChild(elementRef.current);
-        } catch { /* already removed */ }
-        elementRef.current = null;
+      if (pacRef.current && containerRef.current) {
+        try { containerRef.current.removeChild(pacRef.current); } catch {}
+        pacRef.current = null;
       }
     };
   }, [ready]);
 
-  // Fallback: plain input if the API isn't available or billing isn't set up
   if (!ready || fallback) {
     return (
       <input
@@ -118,20 +119,6 @@ export function AddressAutocomplete({ value, onChange, placeholder }: Props) {
   }
 
   return (
-    <div>
-      <div ref={containerRef} className="address-autocomplete-container" />
-      <style>{`
-        .address-autocomplete-container gmp-place-autocomplete {
-          width: 100%;
-          --gmpac-color-surface: hsl(var(--background));
-          --gmpac-color-on-surface: hsl(var(--foreground));
-          --gmpac-color-outline: hsl(var(--input));
-          --gmpac-color-on-surface-variant: hsl(var(--muted-foreground));
-          --gmpac-color-primary: hsl(var(--ring));
-          font-family: inherit;
-          font-size: 0.875rem;
-        }
-      `}</style>
-    </div>
+    <div ref={containerRef} />
   );
 }
