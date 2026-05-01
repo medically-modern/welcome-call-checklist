@@ -41,6 +41,9 @@ const Index = () => {
     if (!selected) return;
     clearOverlay(selected.id);
     update(selected.id, {
+      cgmTypeIndex: null,
+      secondaryInsuranceEdited: null,
+      secondaryInsuranceIndex: null,
       monitorQty: "",
       pumpQty: "",
       qtyInf1: "",
@@ -137,7 +140,7 @@ const Index = () => {
 
               {selected && (
                 <>
-                  <PatientInfoCard patient={selected} />
+                  <PatientInfoCard patient={selected} onFieldChange={handleFieldChange} />
                   <WelcomeCallForm patient={selected} onFieldChange={handleFieldChange} />
                   <ReviewPanel patient={selected} />
 

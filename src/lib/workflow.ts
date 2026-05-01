@@ -20,10 +20,14 @@ export interface Patient {
   serving: string;
   pumpType: string;
   cgmType: string;
+  cgmTypeIndex: number | null;       // editable override
   requestType: string;
   doctorName: string;
   diagnosis: string;
   notes: string;
+  // Secondary insurance (editable when empty)
+  secondaryInsuranceIndex: number | null;
+  secondaryInsuranceEdited: string | null;
   // Editable welcome call fields
   monitorQty: string;
   pumpQty: string;
@@ -108,5 +112,23 @@ export const ORDER_HANDLING_OPTIONS = [
   { index: 0, label: 'Separate' },
   { index: 1, label: 'Together' },
   { index: 2, label: 'Not Applicable' },
+];
+
+export const CGM_TYPE_OPTIONS = [
+  { index: 0, label: 'FreeStyle Libre 14-Day' },
+  { index: 1, label: 'Guardian 4' },
+  { index: 2, label: 'Instinct' },
+  { index: 3, label: 'FreeStyle Libre 3 Plus' },
+  { index: 4, label: 'FreeStyle Libre 2 Plus' },
+  { index: 6, label: 'Dexcom G7' },
+  { index: 7, label: 'Dexcom G7 15-Day' },
+  { index: 8, label: 'Dexcom G6' },
+  { index: 9, label: 'Not Serving' },
+];
+
+export const SECONDARY_INSURANCE_OPTIONS = [
+  { index: 0, label: 'None' },
+  { index: 1, label: 'NY Medicaid' },
+  { index: 2, label: 'Medicare Supplement' },
 ];
 

@@ -1,8 +1,17 @@
 import type { Patient } from "@/lib/workflow";
+import { SECONDARY_INSURANCE_OPTIONS } from "@/lib/workflow";
 import { Card } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Props {
   patient: Patient;
+  onFieldChange?: (field: keyof Patient, value: string | number | null) => void;
 }
 
 function Field({ label, value }: { label: string; value: string }) {
@@ -19,7 +28,9 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function PatientInfoCard({ patient }: Props) {
+export function PatientInfoCard({ patient, onFieldChange }: Props) {
+  const hasSecondaryInsurance = !!patient.secondaryInsurance && patient.secondaryInsurance !== "";
+
   return (
     <div className="space-y-4">
       {/* Patient name */}
@@ -44,21 +55,55 @@ export function PatientInfoCard({ patient }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <Field label="Primary Insurance" value={patient.primaryInsurance} />
             <Field label="Member ID 1" value={patient.memberId1} />
-            <Field label="Secondary Insurance" value={patient.secondaryInsurance} />
+
+            {/* Secondary Insurance: read-only if present, editable dropdown if empty */}
+            {hasSecondaryInsurance ? (
+              <Field label="Secondary Insurance" value={patient.secondaryInsurance} />
+            ) : (
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+                  Secondary Insurance
+                </p>
+                <Select
+                  value={
+                    patient.secondaryInsuranceEdited !== null
+                      ? String(
+                          SECONDARY_INSURANCE_OPTIONS.find(
+                            (o) => o.label === patient.secondaryInsuranceEdited
+                          )?.index ?? ""
+                        )
+                      : ""
+                  }
+                  onValueChange={(value) => {
+                    const option = SECONDARY_INSURANCE_OPTIONS.find(
+                      (o) => String(o.index) === value
+                    );
+                    if (onFieldChange && option) {
+                      onFieldChange("secondaryInsuranceEdited", option.label);
+                      onFieldChange("secondaryInsuranceIndex", option.index);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="Select insurance" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SECONDARY_INSURANCE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.index} value={String(opt.index)}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <Field label="Member ID 2" value={patient.memberId2} />
           </div>
         </Card>
       </div>
 
-      {/* Row 2: CGM + Pump */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card className="p-4">
-          <Field label="CGM Type" value={patient.cgmType} />
-        </Card>
-        <Card className="p-4">
-          <Field label="Pump Type" value={patient.pumpType} />
-        </Card>
-      </div>
+      {/* Row 2: Pump (read-only display removed — pump type now shown in form section 2) */}
     </div>
   );
 }

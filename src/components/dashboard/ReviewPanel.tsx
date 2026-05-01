@@ -17,12 +17,12 @@ function ReviewRow({ label, value, filled }: { label: string; value: string; fil
 export function ReviewPanel({ patient }: Props) {
   // Track which fields have values
   const filledFields: [string, string, boolean][] = [
+    ["CGM Type", patient.cgmType, !!patient.cgmType],
     ["Monitor Qty", patient.monitorQty, !!patient.monitorQty],
-    ["Pump Qty", patient.pumpQty, !!patient.pumpQty],
-    ["Qty Inf. 1", patient.qtyInf1, !!patient.qtyInf1],
     ["Infusion Set 1", patient.infusionSet1, !!patient.infusionSet1],
-    ["Qty Inf. 2", patient.qtyInf2, !!patient.qtyInf2],
+    ["Qty Inf. 1", patient.qtyInf1, !!patient.qtyInf1],
     ["Infusion Set 2", patient.infusionSet2, !!patient.infusionSet2],
+    ["Qty Inf. 2", patient.qtyInf2, !!patient.qtyInf2],
     ["Subscription Type", patient.subscriptionType, !!patient.subscriptionType],
     ["Welcome Call Text", patient.welcomeCallText, !!patient.welcomeCallText],
     ["Order Handling", patient.orderHandling, !!patient.orderHandling],
@@ -30,6 +30,11 @@ export function ReviewPanel({ patient }: Props) {
       "Address",
       patient.addressEdited || patient.address,
       !!(patient.addressEdited || patient.address),
+    ],
+    [
+      "Secondary Insurance",
+      patient.secondaryInsuranceEdited || patient.secondaryInsurance,
+      !!(patient.secondaryInsuranceEdited || patient.secondaryInsurance),
     ],
   ];
 

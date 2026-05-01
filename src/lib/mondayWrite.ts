@@ -4,6 +4,14 @@ import type { Patient } from "./workflow";
 export async function sendPatientToMonday(p: Patient): Promise<void> {
   const tasks: Promise<unknown>[] = [];
 
+  // CGM Type override
+  if (p.cgmTypeIndex !== null)
+    tasks.push(writeStatusIndex(p.id, COL.cgmType, p.cgmTypeIndex));
+
+  // Secondary Insurance (only if edited)
+  if (p.secondaryInsuranceEdited !== null && p.secondaryInsuranceIndex !== null)
+    tasks.push(writeStatusIndex(p.id, COL.secondaryInsurance, p.secondaryInsuranceIndex));
+
   if (p.monitorQty) tasks.push(writeNumber(p.id, COL.monitorQty, Number(p.monitorQty)));
   if (p.pumpQty) tasks.push(writeNumber(p.id, COL.pumpQty, Number(p.pumpQty)));
   if (p.qtyInf1) tasks.push(writeNumber(p.id, COL.qtyInf1, Number(p.qtyInf1)));
