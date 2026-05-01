@@ -2,8 +2,52 @@ import { useEffect, useRef, useState } from "react";
 
 let mapsLoaded = false;
 let mapsLoading = false;
-let placesLib: google.maps.PlacesLibrary | null = null;
 const loadCallbacks: (() => void)[] = [];
+
+/**
+ * Google's inline bootstrap loader — this is the ONLY way to get
+ * `google.maps.importLibrary()` to work.  The classic <script src="...">
+ * tag loads the legacy SDK which does NOT expose importLibrary.
+ */
+function installBootstrapLoader(key: string) {
+  // If the bootstrap was already installed (or someone else loaded Maps), skip.
+  if ((window as any).google?.maps?.importLibrary) return;
+
+  const g: Record<string, string> = { key, v: "weekly" };
+  const c = "google";
+  const l = "importLibrary";
+  const q = "__ib__";
+  const m = document;
+  const b = window as any;
+  b[c] = b[c] || {};
+  const d = b[c].maps = b[c].maps || {};
+  const r = new Set<string>();
+  const e = new URLSearchParams();
+  let h: Promise<void> | undefined;
+  let a: HTMLScriptElement;
+
+  const u = () =>
+    h ||
+    (h = new Promise<void>(async (f, n) => {
+      a = m.createElement("script");
+      e.set("libraries", [...r] + "");
+      for (const k in g)
+        e.set(
+          k.replace(/[A-Z]/g, (t) => "_" + t[0].toLowerCase()),
+          g[k],
+        );
+      e.set("callback", c + ".maps." + q);
+      a.src = `https://maps.googleapis.com/maps/api/js?` + e;
+      d[q] = f;
+      a.onerror = () => (h = undefined, n(new Error("Google Maps JS SDK failed to load")));
+      a.nonce = (m.querySelector("script[nonce]") as HTMLScriptElement)?.nonce || "";
+      m.head.append(a);
+    }));
+
+  d[l]
+    ? console.warn("Google Maps JS API only loads once.")
+    : (d[l] = (f: string, ...n: any[]) => r.add(f) && u().then(() => d[l](f, ...n)));
+}
 
 async function loadGooglePlaces(): Promise<void> {
   if (mapsLoaded) return;
@@ -21,22 +65,11 @@ async function loadGooglePlaces(): Promise<void> {
     return;
   }
 
-  // Load the Maps JS SDK using the inline bootstrap loader (recommended by Google)
-  // @ts-ignore
-  if (!window.google?.maps) {
-    await new Promise<void>((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&loading=async`;
-      script.async = true;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error("Failed to load Google Maps SDK"));
-      document.head.appendChild(script);
-    });
-  }
+  // Install the bootstrap loader so importLibrary() is available
+  installBootstrapLoader(key);
 
-  // Import the places library using the new importLibrary pattern
   try {
-    placesLib = await google.maps.importLibrary("places") as google.maps.PlacesLibrary;
+    await google.maps.importLibrary("places");
     mapsLoaded = true;
     mapsLoading = false;
     loadCallbacks.forEach((cb) => cb());
@@ -66,14 +99,18 @@ export function AddressAutocomplete({ value, onChange, placeholder }: Props) {
   }, []);
 
   useEffect(() => {
-    if (!ready || !containerRef.current || pacRef.current || !placesLib) {
-      if (ready && !placesLib) setFallback(true);
+    if (!ready || !containerRef.current || pacRef.current) {
+      return;
+    }
+    // Verify the Places library actually loaded
+    if (!(window as any).google?.maps?.places?.PlaceAutocompleteElement) {
+      setFallback(true);
       return;
     }
 
     try {
       // @ts-ignore — PlaceAutocompleteElement is new and types may lag
-      const pac = new placesLib.PlaceAutocompleteElement({
+      const pac = new google.maps.places.PlaceAutocompleteElement({
         componentRestrictions: { country: "us" },
         types: ["address"],
       });
