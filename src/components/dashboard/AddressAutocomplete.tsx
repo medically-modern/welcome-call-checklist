@@ -17,6 +17,10 @@ function injectAutocompleteStyles() {
       border-radius: 0.375rem !important;
       height: 40px !important;
       font-size: 0.875rem !important;
+      color: #111 !important;
+      --gmpac-color-on-surface: #111 !important;
+      --gmpac-color-surface: white !important;
+      --gmpac-color-on-surface-variant: #666 !important;
     }
     gmp-place-autocomplete input {
       background-color: white !important;
@@ -154,6 +158,23 @@ export function AddressAutocomplete({ value, onChange, placeholder }: Props) {
 
       containerRef.current.appendChild(pac);
       pacRef.current = pac;
+
+      // Pierce shadow DOM to force black text on white bg
+      const applyShadowStyles = () => {
+        const shadow = pac.shadowRoot;
+        if (shadow) {
+          const s = document.createElement("style");
+          s.textContent = `
+            input { background: white !important; color: #111 !important; }
+            * { color: #111 !important; }
+          `;
+          shadow.appendChild(s);
+        }
+      };
+      // Try immediately, and again after a short delay (shadow may not be ready)
+      applyShadowStyles();
+      setTimeout(applyShadowStyles, 100);
+      setTimeout(applyShadowStyles, 500);
     } catch (err) {
       console.error("Failed to create PlaceAutocompleteElement:", err);
       setFallback(true);
