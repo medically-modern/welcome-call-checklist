@@ -144,57 +144,79 @@ export function AddressAutocomplete({ value, onChange, placeholder }: Props) {
       pac.style.width = "100%";
       injectAutocompleteStyles();
 
-      // Helper: read the address text from the shadow DOM input
-      const readInputValue = (): string => {
+      // Deep debug: log everything we can find about the element and event
+      const findAddress = (evt: any): string => {
+        // 1. Try reading from the element's shadow DOM
         const shadow = pac.shadowRoot;
+        console.log("Shadow root:", shadow);
         if (shadow) {
+          // Try input
           const input = shadow.querySelector("input");
+          console.log("Shadow input:", input, "value:", input?.value);
           if (input?.value) return input.value;
+
+          // Try any element with text content that looks like an address
+          const allEls = shadow.querySelectorAll("*");
+          console.log("Shadow DOM elements:", allEls.length);
+          allEls.forEach((el: any) => {
+            if (el.value) console.log("  element with value:", el.tagName, el.value);
+            if (el.textContent?.includes(",")) console.log("  element with text:", el.tagName, el.textContent?.trim());
+          });
         }
+
+        // 2. Try the pac element itself
+        console.log("pac.value:", (pac as any).value);
+        console.log("pac.innerText:", pac.innerText);
+        console.log("pac.textContent:", pac.textContent);
+        if ((pac as any).value) return (pac as any).value;
+
+        // 3. Walk event properties deeply
+        const evtKeys = Object.getOwnPropertyNames(evt);
+        console.log("Event own props:", evtKeys);
+        for (const key of evtKeys) {
+          try {
+            const val = evt[key];
+            if (val && typeof val === "object" && val !== evt.target && val !== evt.currentTarget) {
+              const valKeys = Object.getOwnPropertyNames(val);
+              console.log(`  evt.${key} props:`, valKeys);
+              // Look for string properties that look like addresses
+              for (const vk of valKeys) {
+                try {
+                  const inner = val[vk];
+                  if (typeof inner === "string" && inner.includes(",") && inner.length > 5) {
+                    console.log(`  evt.${key}.${vk} = "${inner}"`);
+                    return inner;
+                  }
+                } catch {}
+              }
+              // Try toJSON
+              if (typeof val.toJSON === "function") {
+                const j = val.toJSON();
+                console.log(`  evt.${key}.toJSON():`, j);
+                if (j?.formattedAddress) return j.formattedAddress;
+                if (j?.formatted_address) return j.formatted_address;
+              }
+              // Try fetchFields
+              if (typeof val.fetchFields === "function") {
+                console.log(`  evt.${key} has fetchFields`);
+              }
+            }
+          } catch {}
+        }
+
         return "";
       };
 
-      // Helper: try to extract address from the event's place object (minified props vary)
-      const extractAddress = async (evt: any): Promise<string> => {
-        // Try documented property names first
-        const place = evt.place ?? evt.detail?.place;
-        if (place) {
-          try {
-            if (typeof place.fetchFields === "function") {
-              await place.fetchFields({ fields: ["formattedAddress"] });
-            }
-            const addr = place.formattedAddress || place.formatted_address || place.displayName || place.name;
-            if (addr) return addr;
-          } catch { /* fall through */ }
-        }
-
-        // Walk all event properties looking for an object with toJSON or formattedAddress
-        for (const key of Object.keys(evt)) {
-          const val = evt[key];
-          if (val && typeof val === "object") {
-            try {
-              if (typeof val.fetchFields === "function") {
-                await val.fetchFields({ fields: ["formattedAddress"] });
-              }
-              if (val.formattedAddress) return val.formattedAddress;
-              if (typeof val.toJSON === "function") {
-                const j = val.toJSON();
-                if (j?.formattedAddress) return j.formattedAddress;
-              }
-            } catch { /* skip */ }
-          }
-        }
-
-        // Last resort: read from the input element directly
-        return readInputValue();
-      };
-
       for (const evtName of ["gmp-placeselect", "gmp-select"]) {
-        pac.addEventListener(evtName, async (evt: any) => {
+        pac.addEventListener(evtName, (evt: any) => {
           console.log(`${evtName} fired`, evt);
-          const addr = await extractAddress(evt);
-          console.log("Resolved address:", addr);
-          if (addr) onChange(addr);
+
+          // Small delay to let Google populate the input
+          setTimeout(() => {
+            const addr = findAddress(evt);
+            console.log("Resolved address:", addr);
+            if (addr) onChange(addr);
+          }, 50);
         });
       }
 
