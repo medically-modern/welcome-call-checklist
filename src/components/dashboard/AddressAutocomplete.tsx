@@ -166,17 +166,50 @@ export function AddressAutocomplete({ value, onChange, placeholder }: Props) {
       pac.style.width = "100%";
       injectAutocompleteStyles();
 
-      // Listen for place selection — pac.value has the address string
+      // Listen for place selection — use the Place object for full address with zip
       for (const evtName of ["gmp-placeselect", "gmp-select"]) {
-        pac.addEventListener(evtName, () => {
-          setTimeout(async () => {
+        pac.addEventListener(evtName, async (evt: any) => {
+          try {
+            // The event carries a Place object with full details
+            const place = evt?.place ?? evt?.detail?.place;
+            let addr = "";
+            let lat = 0;
+            let lng = 0;
+
+            if (place) {
+              // Fetch full fields if available (formattedAddress includes zip)
+              if (typeof place.fetchFields === "function") {
+                await place.fetchFields({ fields: ["formattedAddress", "location", "addressComponents"] });
+              }
+              addr = place.formattedAddress || place.formatted_address || "";
+              if (place.location) {
+                lat = typeof place.location.lat === "function" ? place.location.lat() : (place.location.lat ?? 0);
+                lng = typeof place.location.lng === "function" ? place.location.lng() : (place.location.lng ?? 0);
+              }
+            }
+
+            // Fallback to pac.value + geocoding if Place didn't give us what we need
+            if (!addr) {
+              addr = (pac as any).value || "";
+            }
+            if (!addr) return;
+
+            if (!lat && !lng) {
+              const coords = await geocodeAddress(addr);
+              lat = coords.lat;
+              lng = coords.lng;
+            }
+
+            console.log("[AddressAutocomplete] selected:", addr, { lat, lng });
+            onChangeRef.current({ address: addr, lat, lng });
+          } catch (err) {
+            // Final fallback — just use the text value
             const addr = (pac as any).value || "";
             if (!addr) return;
-            // Geocode to get lat/lng for Monday's location column
             const coords = await geocodeAddress(addr);
-            console.log("[AddressAutocomplete] selected:", addr, coords);
+            console.log("[AddressAutocomplete] fallback:", addr, coords);
             onChangeRef.current({ address: addr, lat: coords.lat, lng: coords.lng });
-          }, 50);
+          }
         });
       }
 
