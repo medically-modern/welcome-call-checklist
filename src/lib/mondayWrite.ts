@@ -43,8 +43,8 @@ export async function sendPatientToMonday(p: Patient): Promise<void> {
     tasks.push(writeStatusIndex(p.id, COL.escalation, 0)); // Escalation Required
   }
 
-  // Stage advancer — Completed
-  tasks.push(writeStatusIndex(p.id, COL.stageAdvancer, 4));
+  // Stage advancer — Review Profile
+  tasks.push(writeStatusIndex(p.id, COL.stageAdvancer, 0));
 
   await Promise.all(tasks);
 }
