@@ -8,6 +8,7 @@ import {
   ORDER_HANDLING_OPTIONS,
 } from "@/lib/workflow";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -147,17 +148,17 @@ export function WelcomeCallForm({ patient, onFieldChange }: Props) {
             </div>
             <div>
               <label className="text-xs text-muted-foreground block mb-1">Quantity</label>
-              <div className="flex items-center gap-3 h-10">
-                <Switch
-                  checked={patient.qtyInf1 === "1"}
-                  onCheckedChange={(checked) =>
-                    onFieldChange("qtyInf1", checked ? "1" : "0")
-                  }
-                />
-                <span className="text-sm font-medium">
-                  {patient.qtyInf1 === "1" ? "1" : "0"}
-                </span>
-              </div>
+              <Input
+                type="number"
+                min="1"
+                max="10"
+                value={patient.qtyInf1}
+                onChange={(e) => {
+                  const val = Math.min(10, Math.max(1, Number(e.target.value) || 1));
+                  onFieldChange("qtyInf1", String(val));
+                }}
+                placeholder="1"
+              />
             </div>
           </div>
 
@@ -189,17 +190,17 @@ export function WelcomeCallForm({ patient, onFieldChange }: Props) {
             </div>
             <div>
               <label className="text-xs text-muted-foreground block mb-1">Quantity</label>
-              <div className="flex items-center gap-3 h-10">
-                <Switch
-                  checked={patient.qtyInf2 === "1"}
-                  onCheckedChange={(checked) =>
-                    onFieldChange("qtyInf2", checked ? "1" : "0")
-                  }
-                />
-                <span className="text-sm font-medium">
-                  {patient.qtyInf2 === "1" ? "1" : "0"}
-                </span>
-              </div>
+              <Input
+                type="number"
+                min="1"
+                max="10"
+                value={patient.qtyInf2}
+                onChange={(e) => {
+                  const val = Math.min(10, Math.max(1, Number(e.target.value) || 1));
+                  onFieldChange("qtyInf2", String(val));
+                }}
+                placeholder="1"
+              />
             </div>
           </div>
         </div>
