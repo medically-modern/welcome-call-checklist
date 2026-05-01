@@ -3,75 +3,6 @@ import { useEffect, useRef, useState } from "react";
 let mapsLoaded = false;
 let mapsLoading = false;
 const loadCallbacks: (() => void)[] = [];
-let styleInjected = false;
-
-/** Inject a <style> that forces the Google autocomplete element to be white */
-function injectAutocompleteStyles() {
-  if (styleInjected) return;
-  styleInjected = true;
-  const style = document.createElement("style");
-  style.textContent = `
-    gmp-place-autocomplete {
-      background-color: white !important;
-      border: 1px solid hsl(var(--input)) !important;
-      border-radius: 0.375rem !important;
-      height: 40px !important;
-      font-size: 0.875rem !important;
-      color: #111 !important;
-      --gmpac-color-on-surface: #111 !important;
-      --gmpac-color-surface: white !important;
-      --gmpac-color-on-surface-variant: #666 !important;
-    }
-    gmp-place-autocomplete input {
-      background-color: white !important;
-      color: #111 !important;
-    }
-  `;
-  document.head.appendChild(style);
-}
-
-/**
- * Google's inline bootstrap loader — this is the ONLY way to get
- * `google.maps.importLibrary()` to work.
- */
-function installBootstrapLoader(key: string) {
-  if ((window as any).google?.maps?.importLibrary) return;
-
-  const g: Record<string, string> = { key, v: "weekly" };
-  const c = "google";
-  const l = "importLibrary";
-  const q = "__ib__";
-  const m = document;
-  const b = window as any;
-  b[c] = b[c] || {};
-  const d = b[c].maps = b[c].maps || {};
-  const r = new Set<string>();
-  const e = new URLSearchParams();
-  let h: Promise<void> | undefined;
-  let a: HTMLScriptElement;
-
-  const u = () =>
-    h ||
-    (h = new Promise<void>(async (f, n) => {
-      a = m.createElement("script");
-      e.set("libraries", [...r] + "");
-      for (const k in g)
-        e.set(
-          k.replace(/[A-Z]/g, (t) => "_" + t[0].toLowerCase()),
-          g[k],
-        );
-      e.set("callback", c + ".maps." + q);
-      a.src = `https://maps.googleapis.com/maps/api/js?` + e;
-      d[q] = f;
-      a.onerror = () => (h = undefined, n(new Error("Google Maps JS SDK failed to load")));
-      a.nonce = (m.querySelector("script[nonce]") as HTMLScriptElement)?.nonce || "";
-      m.head.append(a);
-    }));
-
-  d[l]
-    ? console.warn("Google Maps JS API only loads once.")
-    : (d[l] = (f: string, ...n: any[]) => r.add(f) && u().then(() => d[l](f, ...n)));
-}
 
 async function loadGooglePlaces(): Promise<void> {
   if (mapsLoaded) return;
@@ -89,34 +20,42 @@ async function loadGooglePlaces(): Promise<void> {
     return;
   }
 
-  installBootstrapLoader(key);
-
-  try {
-    await google.maps.importLibrary("places");
-    await google.maps.importLibrary("geocoding");
-    mapsLoaded = true;
-    mapsLoading = false;
-    loadCallbacks.forEach((cb) => cb());
-    loadCallbacks.length = 0;
-  } catch (err) {
-    console.error("Failed to load Google Places library:", err);
-    mapsLoading = false;
-  }
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
+    script.async = true;
+    script.onload = () => {
+      mapsLoaded = true;
+      mapsLoading = false;
+      loadCallbacks.forEach((cb) => cb());
+      loadCallbacks.length = 0;
+      resolve();
+    };
+    script.onerror = () => {
+      mapsLoading = false;
+      reject(new Error("Google Maps JS SDK failed to load"));
+    };
+    document.head.appendChild(script);
+  });
 }
 
-/** Geocode an address string to lat/lng using the Maps Geocoder */
-async function geocodeAddress(address: string): Promise<{ lat: number; lng: number }> {
-  try {
-    const geocoder = new google.maps.Geocoder();
-    const result = await geocoder.geocode({ address });
-    if (result.results?.[0]?.geometry?.location) {
-      const loc = result.results[0].geometry.location;
-      return { lat: loc.lat(), lng: loc.lng() };
-    }
-  } catch (err) {
-    console.warn("Geocoding failed:", err);
-  }
-  return { lat: 0, lng: 0 };
+/** Build a full address string from address_components, guaranteeing zip is included */
+function buildFullAddress(place: google.maps.places.PlaceResult): string {
+  const components = place.address_components || [];
+  const get = (type: string) => components.find((c) => c.types.includes(type))?.long_name || "";
+
+  const streetNumber = get("street_number");
+  const route = get("route");
+  const city = get("locality") || get("sublocality_level_1") || get("administrative_area_level_3");
+  const state = components.find((c) => c.types.includes("administrative_area_level_1"))?.short_name || "";
+  const zip = get("postal_code");
+  const country = components.find((c) => c.types.includes("country"))?.short_name || "";
+
+  const street = [streetNumber, route].filter(Boolean).join(" ");
+  const parts = [street, city, [state, zip].filter(Boolean).join(" ")].filter(Boolean);
+  let addr = parts.join(", ");
+  if (country) addr += `, ${country}`;
+  return addr;
 }
 
 export interface AddressResult {
@@ -132,11 +71,10 @@ interface Props {
 }
 
 export function AddressAutocomplete({ value, onChange, placeholder }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const pacRef = useRef<HTMLElement | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const onChangeRef = useRef(onChange);
   const [ready, setReady] = useState(mapsLoaded);
-  const [fallback, setFallback] = useState(false);
 
   // Keep the ref current so event listeners always call the latest onChange
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
@@ -144,147 +82,56 @@ export function AddressAutocomplete({ value, onChange, placeholder }: Props) {
   useEffect(() => {
     loadGooglePlaces()
       .then(() => setReady(true))
-      .catch(() => setFallback(true));
+      .catch((err) => console.error("Failed to load Google Places:", err));
   }, []);
 
   useEffect(() => {
-    if (!ready || !containerRef.current || pacRef.current) {
-      return;
-    }
-    if (!(window as any).google?.maps?.places?.PlaceAutocompleteElement) {
-      setFallback(true);
-      return;
-    }
+    if (!ready || !inputRef.current || autocompleteRef.current) return;
 
-    try {
-      // @ts-ignore
-      const pac = new google.maps.places.PlaceAutocompleteElement({
-        componentRestrictions: { country: "us" },
-        types: ["address"],
-      });
+    const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
+      componentRestrictions: { country: "us" },
+      types: ["address"],
+      fields: ["address_components", "formatted_address", "geometry"],
+    });
 
-      pac.style.width = "100%";
-      injectAutocompleteStyles();
+    autocomplete.addListener("place_changed", () => {
+      const place = autocomplete.getPlace();
+      if (!place) return;
 
-      // Listen for place selection — use the Place object for full address with zip
-      for (const evtName of ["gmp-placeselect", "gmp-select"]) {
-        pac.addEventListener(evtName, async (evt: any) => {
-          try {
-            // The event carries a Place object with full details
-            const place = evt?.place ?? evt?.detail?.place;
-            let addr = "";
-            let lat = 0;
-            let lng = 0;
-            let zip = "";
+      // Build address from components to guarantee zip is included
+      const components = place.address_components || [];
+      let addr = "";
 
-            if (place) {
-              // Fetch full fields if available (formattedAddress includes zip)
-              if (typeof place.fetchFields === "function") {
-                await place.fetchFields({ fields: ["formattedAddress", "location", "addressComponents"] });
-              }
-              addr = place.formattedAddress || place.formatted_address || "";
-
-              // Extract zip from addressComponents — this is the reliable source
-              const components = place.addressComponents || place.address_components || [];
-              for (const comp of components) {
-                const types = comp.types || [];
-                if (types.includes("postal_code")) {
-                  zip = comp.longText || comp.long_name || comp.shortText || comp.short_name || "";
-                  break;
-                }
-              }
-
-              console.log("[AddressAutocomplete] components:", components.map((c: any) => ({
-                types: c.types,
-                long: c.longText || c.long_name,
-                short: c.shortText || c.short_name,
-              })));
-
-              // If the address doesn't already contain the zip, append it
-              if (zip && addr && !addr.includes(zip)) {
-                // Insert zip before ", USA" or append at end
-                if (addr.includes(", USA")) {
-                  addr = addr.replace(", USA", ` ${zip}, USA`);
-                } else {
-                  addr = `${addr} ${zip}`;
-                }
-              }
-
-              if (place.location) {
-                lat = typeof place.location.lat === "function" ? place.location.lat() : (place.location.lat ?? 0);
-                lng = typeof place.location.lng === "function" ? place.location.lng() : (place.location.lng ?? 0);
-              }
-            }
-
-            // Fallback to pac.value + geocoding if Place didn't give us what we need
-            if (!addr) {
-              addr = (pac as any).value || "";
-            }
-            if (!addr) return;
-
-            if (!lat && !lng) {
-              const coords = await geocodeAddress(addr);
-              lat = coords.lat;
-              lng = coords.lng;
-            }
-
-            console.log("[AddressAutocomplete] selected:", addr, { lat, lng, zip });
-            onChangeRef.current({ address: addr, lat, lng });
-          } catch (err) {
-            // Final fallback — just use the text value
-            console.error("[AddressAutocomplete] error:", err);
-            const addr = (pac as any).value || "";
-            if (!addr) return;
-            const coords = await geocodeAddress(addr);
-            console.log("[AddressAutocomplete] fallback:", addr, coords);
-            onChangeRef.current({ address: addr, lat: coords.lat, lng: coords.lng });
-          }
-        });
+      if (components.length > 0) {
+        addr = buildFullAddress(place);
+        console.log("[AddressAutocomplete] built from components:", addr);
+      } else {
+        addr = place.formatted_address || inputRef.current?.value || "";
+        console.log("[AddressAutocomplete] using formatted_address:", addr);
       }
 
-      containerRef.current.appendChild(pac);
-      pacRef.current = pac;
+      if (!addr) return;
 
-      // Pierce shadow DOM to force black text on white bg
-      const applyShadowStyles = () => {
-        const shadow = pac.shadowRoot;
-        if (shadow) {
-          const s = document.createElement("style");
-          s.textContent = `
-            input { background: white !important; color: #111 !important; }
-            * { color: #111 !important; }
-          `;
-          shadow.appendChild(s);
-        }
-      };
-      applyShadowStyles();
-      setTimeout(applyShadowStyles, 100);
-      setTimeout(applyShadowStyles, 500);
-    } catch (err) {
-      console.error("Failed to create PlaceAutocompleteElement:", err);
-      setFallback(true);
-    }
-
-    return () => {
-      if (pacRef.current && containerRef.current) {
-        try { containerRef.current.removeChild(pacRef.current); } catch {}
-        pacRef.current = null;
+      let lat = 0;
+      let lng = 0;
+      if (place.geometry?.location) {
+        lat = place.geometry.location.lat();
+        lng = place.geometry.location.lng();
       }
-    };
+
+      console.log("[AddressAutocomplete] final:", addr, { lat, lng });
+      onChangeRef.current({ address: addr, lat, lng });
+    });
+
+    autocompleteRef.current = autocomplete;
   }, [ready]);
 
-  if (!ready || fallback) {
-    return (
-      <input
-        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        value={value}
-        onChange={(e) => onChange({ address: e.target.value, lat: 0, lng: 0 })}
-        placeholder={placeholder ?? "Enter address"}
-      />
-    );
-  }
-
   return (
-    <div ref={containerRef} />
+    <input
+      ref={inputRef}
+      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      defaultValue={value}
+      placeholder={placeholder ?? "Enter address"}
+    />
   );
 }
