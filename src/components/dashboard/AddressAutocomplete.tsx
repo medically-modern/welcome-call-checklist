@@ -175,6 +175,7 @@ export function AddressAutocomplete({ value, onChange, placeholder }: Props) {
             let addr = "";
             let lat = 0;
             let lng = 0;
+            let zip = "";
 
             if (place) {
               // Fetch full fields if available (formattedAddress includes zip)
@@ -182,6 +183,33 @@ export function AddressAutocomplete({ value, onChange, placeholder }: Props) {
                 await place.fetchFields({ fields: ["formattedAddress", "location", "addressComponents"] });
               }
               addr = place.formattedAddress || place.formatted_address || "";
+
+              // Extract zip from addressComponents — this is the reliable source
+              const components = place.addressComponents || place.address_components || [];
+              for (const comp of components) {
+                const types = comp.types || [];
+                if (types.includes("postal_code")) {
+                  zip = comp.longText || comp.long_name || comp.shortText || comp.short_name || "";
+                  break;
+                }
+              }
+
+              console.log("[AddressAutocomplete] components:", components.map((c: any) => ({
+                types: c.types,
+                long: c.longText || c.long_name,
+                short: c.shortText || c.short_name,
+              })));
+
+              // If the address doesn't already contain the zip, append it
+              if (zip && addr && !addr.includes(zip)) {
+                // Insert zip before ", USA" or append at end
+                if (addr.includes(", USA")) {
+                  addr = addr.replace(", USA", ` ${zip}, USA`);
+                } else {
+                  addr = `${addr} ${zip}`;
+                }
+              }
+
               if (place.location) {
                 lat = typeof place.location.lat === "function" ? place.location.lat() : (place.location.lat ?? 0);
                 lng = typeof place.location.lng === "function" ? place.location.lng() : (place.location.lng ?? 0);
@@ -200,10 +228,11 @@ export function AddressAutocomplete({ value, onChange, placeholder }: Props) {
               lng = coords.lng;
             }
 
-            console.log("[AddressAutocomplete] selected:", addr, { lat, lng });
+            console.log("[AddressAutocomplete] selected:", addr, { lat, lng, zip });
             onChangeRef.current({ address: addr, lat, lng });
           } catch (err) {
             // Final fallback — just use the text value
+            console.error("[AddressAutocomplete] error:", err);
             const addr = (pac as any).value || "";
             if (!addr) return;
             const coords = await geocodeAddress(addr);
