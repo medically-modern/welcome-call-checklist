@@ -1,5 +1,5 @@
 import type { Patient } from "@/lib/workflow";
-import { SECONDARY_INSURANCE_OPTIONS, formatPhone } from "@/lib/workflow";
+import { SECONDARY_INSURANCE_OPTIONS, formatPhone, formatDateMDY } from "@/lib/workflow";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -49,7 +49,7 @@ export function PatientInfoCard({ patient, onFieldChange }: Props) {
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
               Intake Date
             </p>
-            <p className="text-lg font-semibold">{patient.referralReceivedDate}</p>
+            <p className="text-lg font-semibold">{formatDateMDY(patient.referralReceivedDate)}</p>
           </div>
         )}
 

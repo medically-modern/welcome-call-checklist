@@ -162,6 +162,18 @@ export function formatPhone(raw: string): string {
   return raw; // return as-is if not a standard US number
 }
 
+/* ─── Date formatting ─── */
+
+export function formatDateMDY(raw: string): string {
+  if (!raw) return '';
+  // Monday date columns come as YYYY-MM-DD
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    return \`\${match[2]}/\${match[3]}/\${match[1]}\`;
+  }
+  return raw;
+}
+
 /* ─── Validation for Send to Monday ─── */
 
 function hasZipCode(address: string): boolean {
