@@ -50,6 +50,7 @@ export function mondayItemToPatient(item: MondayItem): Patient {
     memberId2: txt(COL.memberId2),
     serving: txt(COL.serving),
     pumpType: txt(COL.pumpType),
+    pumpTypeIndex: statusIndex(COL.pumpType),
     cgmType: txt(COL.cgmType),
     cgmTypeIndex: statusIndex(COL.cgmType),
     requestType: txt(COL.requestType),

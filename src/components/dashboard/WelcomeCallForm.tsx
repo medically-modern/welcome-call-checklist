@@ -42,6 +42,7 @@ import { cn } from "@/lib/utils";
 interface Props {
   patient: Patient;
   onFieldChange: (field: keyof Patient, value: string | number | null) => void;
+  onSendWelcomeCallText?: () => Promise<void>;
 }
 
 function SectionHeading({ number, title }: { number: number; title: string }) {
@@ -148,7 +149,8 @@ function QtySelect({
   );
 }
 
-export function WelcomeCallForm({ patient, onFieldChange }: Props) {
+export function WelcomeCallForm({ patient, onFieldChange, onSendWelcomeCallText }: Props) {
+  const [sendingWelcomeText, setSendingWelcomeText] = useState(false);
   const handleSelectChange = (field: string, value: string, index: number | null) => {
     onFieldChange(field as keyof Patient, value);
     onFieldChange(`${field}Index` as keyof Patient, index);
@@ -492,25 +494,42 @@ export function WelcomeCallForm({ patient, onFieldChange }: Props) {
         <div className="mt-6">
           <Button
             variant={patient.welcomeCallTextIndex !== null ? "secondary" : "default"}
+            disabled={sendingWelcomeText}
             className={cn(
               "gap-2 w-full sm:w-auto",
               patient.welcomeCallTextIndex !== null && "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300"
             )}
-            onClick={() => {
+            onClick={async () => {
+              // If already queued and the parent hasn't supplied a sender, allow toggle off (legacy behavior)
               if (patient.welcomeCallTextIndex !== null) {
-                // Toggle off
                 onFieldChange("welcomeCallText", "");
                 onFieldChange("welcomeCallTextIndex" as keyof Patient, null);
-              } else {
-                // Set to Send (index 0)
+                return;
+              }
+              if (!onSendWelcomeCallText) {
+                // Fallback: just flip local state (preview / no-Monday environment)
                 onFieldChange("welcomeCallText", "Send");
                 onFieldChange("welcomeCallTextIndex" as keyof Patient, 0);
+                return;
+              }
+              try {
+                setSendingWelcomeText(true);
+                await onSendWelcomeCallText();
+              } finally {
+                setSendingWelcomeText(false);
               }
             }}
           >
             <MessageSquare className="h-4 w-4" />
-            {patient.welcomeCallTextIndex !== null ? "Welcome Call Text: Queued" : "Send Welcome Call Text"}
+            {sendingWelcomeText
+              ? "Sending…"
+              : patient.welcomeCallTextIndex !== null
+                ? "Welcome Call Text: Queued"
+                : "Send Welcome Call Text"}
           </Button>
+          <p className="text-xs text-muted-foreground mt-2">
+            Pushes the form data above to Monday, then flips the Welcome Call Text trigger to Send.
+          </p>
         </div>
       </Card>
     </div>

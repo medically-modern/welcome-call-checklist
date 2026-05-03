@@ -19,6 +19,7 @@ export interface Patient {
   // Read-only product/referral
   serving: string;
   pumpType: string;
+  pumpTypeIndex: number | null;
   cgmType: string;
   cgmTypeIndex: number | null;       // editable override
   requestType: string;

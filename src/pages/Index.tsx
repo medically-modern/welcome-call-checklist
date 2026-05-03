@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { RotateCcw, ClipboardCheck } from "lucide-react";
 import { toast } from "sonner";
-import { sendPatientToMonday } from "@/lib/mondayWrite";
+import { sendPatientToMonday, sendWelcomeCallTextToMonday } from "@/lib/mondayWrite";
 import { validatePatientForSend } from "@/lib/workflow";
 
 const Index = () => {
@@ -90,6 +90,25 @@ const Index = () => {
     }
   };
 
+  const handleSendWelcomeCallText = async () => {
+    if (!selected) return;
+    try {
+      await sendWelcomeCallTextToMonday(selected);
+      // Mirror Monday state locally so the button flips to "Queued"
+      update(selected.id, {
+        welcomeCallText: "Send",
+        welcomeCallTextIndex: 0,
+      } as Partial<Patient>);
+      toast.success("Welcome Call Text queued in Monday");
+      refetch();
+    } catch (e) {
+      toast.error("Welcome Call Text failed", {
+        description: e instanceof Error ? e.message : String(e),
+      });
+      throw e;
+    }
+  };
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gradient-subtle">
@@ -148,7 +167,7 @@ const Index = () => {
               {selected && (
                 <>
                   <PatientInfoCard patient={selected} onFieldChange={handleFieldChange} />
-                  <WelcomeCallForm patient={selected} onFieldChange={handleFieldChange} />
+                  <WelcomeCallForm patient={selected} onFieldChange={handleFieldChange} onSendWelcomeCallText={handleSendWelcomeCallText} />
                   <ReviewPanel patient={selected} />
 
                   <EscalateButton
