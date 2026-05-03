@@ -47,6 +47,9 @@ export interface Patient {
   welcomeCallTextIndex: number | null;
   orderHandling: string;
   orderHandlingIndex: number | null;
+  // End-of-call decision: index 1 = Advance, index 2 = Don't Advance
+  advanceDecision: string;
+  advanceDecisionIndex: number | null;
   addressEdited: string | null; // local edit of address
   addressLat: number | null;    // lat from Google Places geocode
   addressLng: number | null;    // lng from Google Places geocode
@@ -220,6 +223,11 @@ function hasZipCode(address: string): boolean {
 
 export function validatePatientForSend(p: Patient): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
+
+  // End-of-call decision is required
+  if (p.advanceDecisionIndex === null) {
+    errors.push('Pick Advance or Don\'t Advance before sending');
+  }
 
   // Subscription type is required
   if (p.subscriptionTypeIndex === null) {

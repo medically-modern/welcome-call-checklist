@@ -49,6 +49,7 @@ export const COL = {
   subscriptionType: "color_mm1xbqth",
   welcomeCallText: "color_mm1xtqvv",
   orderHandling: "color_mm2776fg",
+  advanceDecision: "color_mm301cpp",
   
   // Stage
   stageAdvancer: "color_mm1ws96t",
@@ -63,7 +64,7 @@ export const READ_COLUMN_IDS = [
   COL.diagnosis, COL.notes,
   COL.monitorQty, COL.pumpQty, COL.qtyInf1, COL.infusionSet1,
   COL.qtyInf2, COL.infusionSet2, COL.subscriptionType, COL.welcomeCallText,
-  COL.orderHandling,
+  COL.orderHandling, COL.advanceDecision,
 ];
 
 export interface MondayColumnValue {

@@ -532,6 +532,71 @@ export function WelcomeCallForm({ patient, onFieldChange, onSendWelcomeCallText 
           </p>
         </div>
       </Card>
+
+      {/* ─── End-of-call decision: Advance? ─── */}
+      <Card className="p-6">
+        <SectionHeading number={4} title="End of Call" />
+        <p className="text-sm text-muted-foreground mb-4">
+          After wrapping up the welcome call, decide whether this patient should
+          advance to Order or hold here. Either choice routes the patient back
+          for Profile Review on the Monday board.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Button
+            type="button"
+            variant={patient.advanceDecisionIndex === 1 ? "default" : "outline"}
+            className={cn(
+              "h-auto py-4 justify-start text-left whitespace-normal",
+              patient.advanceDecisionIndex === 1 &&
+                "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700"
+            )}
+            onClick={() => {
+              if (patient.advanceDecisionIndex === 1) {
+                onFieldChange("advanceDecision", "");
+                onFieldChange("advanceDecisionIndex" as keyof Patient, null);
+              } else {
+                onFieldChange("advanceDecision", "Advance");
+                onFieldChange("advanceDecisionIndex" as keyof Patient, 1);
+              }
+            }}
+          >
+            <div>
+              <p className="font-semibold text-sm">Advance</p>
+              <p className="text-xs opacity-90 font-normal">
+                Move forward to Order.
+              </p>
+            </div>
+          </Button>
+          <Button
+            type="button"
+            variant={patient.advanceDecisionIndex === 2 ? "default" : "outline"}
+            className={cn(
+              "h-auto py-4 justify-start text-left whitespace-normal",
+              patient.advanceDecisionIndex === 2 &&
+                "bg-rose-600 hover:bg-rose-700 text-white border-rose-700"
+            )}
+            onClick={() => {
+              if (patient.advanceDecisionIndex === 2) {
+                onFieldChange("advanceDecision", "");
+                onFieldChange("advanceDecisionIndex" as keyof Patient, null);
+              } else {
+                onFieldChange("advanceDecision", "Don't Advance");
+                onFieldChange("advanceDecisionIndex" as keyof Patient, 2);
+              }
+            }}
+          >
+            <div>
+              <p className="font-semibold text-sm">Don&apos;t Advance</p>
+              <p className="text-xs opacity-90 font-normal">
+                Hold this patient — do not progress to Order.
+              </p>
+            </div>
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground mt-3">
+          Required before pressing Send to Monday. Either choice sets Stage Advancer to <span className="font-semibold">Review Profile</span>.
+        </p>
+      </Card>
     </div>
   );
 }

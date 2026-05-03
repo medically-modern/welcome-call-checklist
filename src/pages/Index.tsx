@@ -65,6 +65,8 @@ const Index = () => {
       welcomeCallTextIndex: null,
       orderHandling: "",
       orderHandlingIndex: null,
+      advanceDecision: "",
+      advanceDecisionIndex: null,
       addressEdited: null,
       addressLat: null,
       addressLng: null,

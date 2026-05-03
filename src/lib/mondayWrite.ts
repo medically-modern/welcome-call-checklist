@@ -31,6 +31,8 @@ export async function sendPatientToMonday(p: Patient): Promise<void> {
     tasks.push(writeStatusIndex(p.id, COL.welcomeCallText, p.welcomeCallTextIndex));
   if (p.orderHandlingIndex !== null)
     tasks.push(writeStatusIndex(p.id, COL.orderHandling, p.orderHandlingIndex));
+  if (p.advanceDecisionIndex !== null)
+    tasks.push(writeStatusIndex(p.id, COL.advanceDecision, p.advanceDecisionIndex));
 
   if (p.addressEdited !== null) {
     const lat = p.addressLat ?? 0;
