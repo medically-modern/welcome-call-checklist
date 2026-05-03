@@ -228,7 +228,7 @@ export function WelcomeCallForm({ patient, onFieldChange, onSendWelcomeCallText 
                 </SelectContent>
               </Select>
               {isCrossSell(patient) && (
-                <p className="mt-2 text-xs font-medium text-red-600">
+                <p className="mt-2 text-xs font-medium text-blue-600">
                   Cross-sell: verify the patient's CGM — Dexcom G7 was used as the default.
                 </p>
               )}
