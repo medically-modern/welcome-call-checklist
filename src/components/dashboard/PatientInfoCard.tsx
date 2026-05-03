@@ -1,5 +1,5 @@
 import type { Patient } from "@/lib/workflow";
-import { SECONDARY_INSURANCE_OPTIONS } from "@/lib/workflow";
+import { SECONDARY_INSURANCE_OPTIONS, formatPhone } from "@/lib/workflow";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -35,7 +35,7 @@ export function PatientInfoCard({ patient, onFieldChange }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Patient name + phone */}
+      {/* Patient name + phone + intake date */}
       <Card className="p-4 flex items-center justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">
@@ -43,13 +43,23 @@ export function PatientInfoCard({ patient, onFieldChange }: Props) {
           </p>
           <p className="text-lg font-semibold">{patient.name}</p>
         </div>
+
+        {patient.referralReceivedDate && (
+          <div className="text-center">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+              Intake Date
+            </p>
+            <p className="text-lg font-semibold">{patient.referralReceivedDate}</p>
+          </div>
+        )}
+
         {patient.phone && (
           <div className="text-right">
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
               Phone
             </p>
-            <a href={`tel:${patient.phone}`} className="text-sm font-medium text-primary hover:underline">
-              {patient.phone}
+            <a href={`tel:${patient.phone}`} className="text-lg font-semibold text-primary hover:underline">
+              {formatPhone(patient.phone)}
             </a>
           </div>
         )}
@@ -58,8 +68,9 @@ export function PatientInfoCard({ patient, onFieldChange }: Props) {
       {/* Row 1: Referral/Product + Insurance */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Field label="Referral Source" value={patient.doctorName} />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <Field label="Referral Source" value={patient.referralSource} />
+            <Field label="Doctor Name" value={patient.doctorName} />
             <Field label="Request Type" value={patient.requestType} />
             <Field label="Serving" value={patient.serving} />
           </div>
@@ -135,8 +146,6 @@ export function PatientInfoCard({ patient, onFieldChange }: Props) {
           </div>
         </Card>
       </div>
-
-      {/* Row 2: Pump (read-only display removed — pump type now shown in form section 2) */}
     </div>
   );
 }

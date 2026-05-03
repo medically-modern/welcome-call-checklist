@@ -23,6 +23,8 @@ export interface Patient {
   cgmTypeIndex: number | null;       // editable override
   requestType: string;
   doctorName: string;
+  referralSource: string;            // NEW: tandem, patient, doctor, etc.
+  referralReceivedDate: string;      // NEW: date column
   diagnosis: string;
   notes: string;
   // Secondary insurance & member ID 2 (editable when empty)
@@ -133,3 +135,76 @@ export const SECONDARY_INSURANCE_OPTIONS = [
   { index: 2, label: 'Medicare Supplement' },
 ];
 
+/* ─── Serving-based visibility helpers ─── */
+
+/** Returns true if CGM section should default to visible based on serving value */
+export function servingIncludesCgm(serving: string): boolean {
+  const s = serving.toLowerCase();
+  return s.includes('cgm');
+}
+
+/** Returns true if Pump/Infusion section should default to visible based on serving value */
+export function servingIncludesPump(serving: string): boolean {
+  const s = serving.toLowerCase();
+  return s.includes('pump') || s.includes('supplies');
+}
+
+/* ─── Phone formatting ─── */
+
+export function formatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+  if (digits.length === 11 && digits[0] === '1') {
+    return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+  }
+  return raw; // return as-is if not a standard US number
+}
+
+/* ─── Validation for Send to Monday ─── */
+
+function hasZipCode(address: string): boolean {
+  if (!address) return false;
+  return /\b\d{5}(-\d{4})?\b/.test(address);
+}
+
+export function validatePatientForSend(p: Patient): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  // Subscription type is required
+  if (p.subscriptionTypeIndex === null) {
+    errors.push('Subscription Type is required');
+  }
+
+  // Address validation — either original must have zip or edited must
+  const effectiveAddress = p.addressEdited ?? p.address;
+  if (!effectiveAddress || !hasZipCode(effectiveAddress)) {
+    errors.push('Address with zip code is required');
+  }
+
+  // CGM fields required if serving includes CGM
+  if (servingIncludesCgm(p.serving)) {
+    if (p.cgmTypeIndex === null) {
+      errors.push('CGM Type is required (serving includes CGM)');
+    }
+  }
+
+  // Pump/Infusion fields required if serving includes pump/supplies
+  if (servingIncludesPump(p.serving)) {
+    // Infusion set 1 — required unless qty is 0
+    const qty1 = Number(p.qtyInf1) || 0;
+    if (qty1 > 0 && p.infusionSet1Index === null) {
+      errors.push('Infusion Set 1 type is required when quantity > 0');
+    }
+    if (qty1 === 0 && p.infusionSet1Index === null) {
+      // Rare but allowed — both blank/0
+    }
+    // If infusion set is selected, qty must be > 0 (unless "Not Serving")
+    if (p.infusionSet1Index !== null && p.infusionSet1Index !== 101 && qty1 === 0) {
+      errors.push('Infusion Set 1 quantity required when set type is selected');
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
+}

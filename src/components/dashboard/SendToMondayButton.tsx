@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { Check, Loader2, Send, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 type State = "idle" | "sending" | "success" | "error";
@@ -8,9 +14,10 @@ type State = "idle" | "sending" | "success" | "error";
 interface Props {
   onSend: () => Promise<void>;
   disabled?: boolean;
+  validationErrors?: string[];
 }
 
-export function SendToMondayButton({ onSend, disabled }: Props) {
+export function SendToMondayButton({ onSend, disabled, validationErrors = [] }: Props) {
   const [state, setState] = useState<State>("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -58,22 +65,46 @@ export function SendToMondayButton({ onSend, disabled }: Props) {
     },
   }[state];
 
+  const hasValidationErrors = validationErrors.length > 0;
+
+  const button = (
+    <Button
+      onClick={handleClick}
+      disabled={disabled || state === "sending"}
+      title={error ?? config.label}
+      size="lg"
+      className={cn(
+        "gap-2 shadow-elevate rounded-full px-8 h-12 text-base font-semibold transition-all duration-300",
+        state === "success" && "animate-fade-in",
+        config.className,
+      )}
+    >
+      {config.icon}
+      <span>{config.label}</span>
+    </Button>
+  );
+
   return (
-    <div className="flex justify-center pt-2">
-      <Button
-        onClick={handleClick}
-        disabled={disabled || state === "sending"}
-        title={error ?? config.label}
-        size="lg"
-        className={cn(
-          "gap-2 shadow-elevate rounded-full px-8 h-12 text-base font-semibold transition-all duration-300",
-          state === "success" && "animate-fade-in",
-          config.className,
-        )}
-      >
-        {config.icon}
-        <span>{config.label}</span>
-      </Button>
+    <div className="flex flex-col items-center gap-2 pt-2">
+      {hasValidationErrors && disabled ? (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span tabIndex={0}>{button}</span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs">
+              <p className="font-semibold text-xs mb-1">Required before sending:</p>
+              <ul className="text-xs space-y-0.5">
+                {validationErrors.map((err, i) => (
+                  <li key={i}>• {err}</li>
+                ))}
+              </ul>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ) : (
+        button
+      )}
     </div>
   );
 }

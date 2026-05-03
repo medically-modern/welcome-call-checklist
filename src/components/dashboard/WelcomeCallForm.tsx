@@ -1,15 +1,17 @@
+import { useState, useEffect } from "react";
 import type { Patient } from "@/lib/workflow";
 import {
   CGM_TYPE_OPTIONS,
   INFUSION_SET_1_OPTIONS,
   INFUSION_SET_2_OPTIONS,
   SUBSCRIPTION_TYPE_OPTIONS,
-  WELCOME_CALL_TEXT_OPTIONS,
   ORDER_HANDLING_OPTIONS,
+  servingIncludesCgm,
+  servingIncludesPump,
 } from "@/lib/workflow";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -17,7 +19,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { AddressAutocomplete, type AddressResult } from "@/components/dashboard/AddressAutocomplete";
+import { Check, ChevronsUpDown, MessageSquare, Eye, EyeOff } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Props {
   patient: Patient;
@@ -42,11 +59,116 @@ function hasZipCode(address: string): boolean {
   return /\b\d{5}(-\d{4})?\b/.test(address);
 }
 
+/** Searchable combobox for infusion set selection */
+function InfusionSetCombobox({
+  options,
+  value,
+  onSelect,
+  placeholder = "Select option",
+}: {
+  options: { index: number; label: string }[];
+  value: number | null;
+  onSelect: (label: string, index: number | null) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((o) => o.index === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+        >
+          <span className="truncate">
+            {selected ? selected.label : placeholder}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Search infusion sets..." />
+          <CommandList>
+            <CommandEmpty>No match found.</CommandEmpty>
+            <CommandGroup>
+              {options.map((opt) => (
+                <CommandItem
+                  key={opt.index}
+                  value={opt.label}
+                  onSelect={() => {
+                    onSelect(opt.label, opt.index);
+                    setOpen(false);
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === opt.index ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {opt.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/** Quantity selector as a dropdown 0-10 */
+function QtySelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+}) {
+  return (
+    <Select value={value || "0"} onValueChange={onChange}>
+      <SelectTrigger>
+        <SelectValue placeholder="0" />
+      </SelectTrigger>
+      <SelectContent>
+        {Array.from({ length: 11 }, (_, i) => (
+          <SelectItem key={i} value={String(i)}>
+            {i}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 export function WelcomeCallForm({ patient, onFieldChange }: Props) {
   const handleSelectChange = (field: string, value: string, index: number | null) => {
     onFieldChange(field as keyof Patient, value);
     onFieldChange(`${field}Index` as keyof Patient, index);
   };
+
+  // Section visibility based on serving — with user override toggles
+  const defaultShowCgm = servingIncludesCgm(patient.serving);
+  const defaultShowPump = servingIncludesPump(patient.serving);
+
+  const [cgmOverride, setCgmOverride] = useState<boolean | null>(null);
+  const [pumpOverride, setPumpOverride] = useState<boolean | null>(null);
+
+  // Reset overrides when patient changes
+  useEffect(() => {
+    setCgmOverride(null);
+    setPumpOverride(null);
+  }, [patient.id]);
+
+  const showCgm = cgmOverride !== null ? cgmOverride : defaultShowCgm;
+  const showPump = pumpOverride !== null ? pumpOverride : defaultShowPump;
+
+  // Order handling only visible when subscription type = "Sensors & Supplies" (index 1)
+  const showOrderHandling = patient.subscriptionTypeIndex === 1;
 
   return (
     <div className="space-y-5">
@@ -61,155 +183,181 @@ export function WelcomeCallForm({ patient, onFieldChange }: Props) {
       </div>
 
       {/* ─── Section 1: CGM ─── */}
-      <Card className="p-6">
-        <SectionHeading number={1} title="CGM" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {/* CGM Type — editable dropdown */}
-          <div>
-            <label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold block mb-2">
-              CGM Type
-            </label>
-            <Select
-              value={patient.cgmTypeIndex !== null ? String(patient.cgmTypeIndex) : ""}
-              onValueChange={(value) => {
-                const option = CGM_TYPE_OPTIONS.find((o) => String(o.index) === value);
-                handleSelectChange("cgmType", option?.label || "", option?.index ?? null);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select CGM type" />
-              </SelectTrigger>
-              <SelectContent>
-                {CGM_TYPE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.index} value={String(opt.index)}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      {showCgm ? (
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <SectionHeading number={1} title="CGM" />
+            {!defaultShowCgm && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCgmOverride(false)}
+                className="text-muted-foreground text-xs gap-1"
+              >
+                <EyeOff className="h-3.5 w-3.5" /> Hide
+              </Button>
+            )}
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* CGM Type — editable dropdown */}
+            <div>
+              <label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold block mb-2">
+                CGM Type
+              </label>
+              <Select
+                value={patient.cgmTypeIndex !== null ? String(patient.cgmTypeIndex) : ""}
+                onValueChange={(value) => {
+                  const option = CGM_TYPE_OPTIONS.find((o) => String(o.index) === value);
+                  handleSelectChange("cgmType", option?.label || "", option?.index ?? null);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select CGM type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CGM_TYPE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.index} value={String(opt.index)}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* Monitor Qty — toggle (0 or 1) */}
-          <div>
-            <label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold block mb-2">
-              Monitor Qty
-            </label>
-            <div className="flex items-center gap-3 h-10">
-              <Switch
-                checked={patient.monitorQty === "1"}
-                onCheckedChange={(checked) =>
-                  onFieldChange("monitorQty", checked ? "1" : "0")
-                }
-              />
-              <span className="text-sm font-medium">
-                {patient.monitorQty === "1" ? "1 — Yes" : "0 — No"}
-              </span>
+            {/* Monitor Qty — toggle (0 or 1) */}
+            <div>
+              <label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold block mb-2">
+                Monitor Qty
+              </label>
+              <div className="flex items-center gap-3 h-10">
+                <Switch
+                  checked={patient.monitorQty === "1"}
+                  onCheckedChange={(checked) =>
+                    onFieldChange("monitorQty", checked ? "1" : "0")
+                  }
+                />
+                <span className="text-sm font-medium">
+                  {patient.monitorQty === "1" ? "1 — Yes" : "0 — No"}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      ) : (
+        <Card className="p-4 border-dashed">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-semibold">CGM</span> — hidden (not in serving)
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setCgmOverride(true)}
+              className="text-muted-foreground text-xs gap-1"
+            >
+              <Eye className="h-3.5 w-3.5" /> Show
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* ─── Section 2: Pump & Infusion Sets ─── */}
-      <Card className="p-6">
-        <SectionHeading number={2} title="Pump & Infusion Sets" />
-
-        {/* Pump Type — read-only */}
-        <div className="mb-5">
-          <label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold block mb-1">
-            Pump Type
-          </label>
-          <p className="text-sm font-medium px-3 py-2 rounded-md bg-muted/50 border border-input min-h-[40px] flex items-center">
-            {patient.pumpType || <span className="text-muted-foreground italic">Not set</span>}
-          </p>
-        </div>
-
-        {/* Infusion Set pairs — visually tied */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Infusion Set 1 group */}
-          <div className="rounded-lg border border-input bg-muted/20 p-4 space-y-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Infusion Set 1
-            </p>
-            <div>
-              <label className="text-xs text-muted-foreground block mb-1">Set Type</label>
-              <Select
-                value={patient.infusionSet1Index !== null ? String(patient.infusionSet1Index) : ""}
-                onValueChange={(value) => {
-                  const option = INFUSION_SET_1_OPTIONS.find((o) => String(o.index) === value);
-                  handleSelectChange("infusionSet1", option?.label || "", option?.index ?? null);
-                }}
+      {showPump ? (
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <SectionHeading number={2} title="Pump & Infusion Sets" />
+            {!defaultShowPump && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPumpOverride(false)}
+                className="text-muted-foreground text-xs gap-1"
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select option" />
-                </SelectTrigger>
-                <SelectContent>
-                  {INFUSION_SET_1_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.index} value={String(opt.index)}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground block mb-1">Quantity</label>
-              <Input
-                type="number"
-                min="1"
-                max="10"
-                value={patient.qtyInf1}
-                onChange={(e) => {
-                  const val = Math.min(10, Math.max(1, Number(e.target.value) || 1));
-                  onFieldChange("qtyInf1", String(val));
-                }}
-                placeholder="1"
-              />
-            </div>
+                <EyeOff className="h-3.5 w-3.5" /> Hide
+              </Button>
+            )}
           </div>
 
-          {/* Infusion Set 2 group */}
-          <div className="rounded-lg border border-input bg-muted/20 p-4 space-y-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Infusion Set 2
+          {/* Pump Type — read-only */}
+          <div className="mb-5">
+            <label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold block mb-1">
+              Pump Type
+            </label>
+            <p className="text-sm font-medium px-3 py-2 rounded-md bg-muted/50 border border-input min-h-[40px] flex items-center">
+              {patient.pumpType || <span className="text-muted-foreground italic">Not set</span>}
             </p>
-            <div>
-              <label className="text-xs text-muted-foreground block mb-1">Set Type</label>
-              <Select
-                value={patient.infusionSet2Index !== null ? String(patient.infusionSet2Index) : ""}
-                onValueChange={(value) => {
-                  const option = INFUSION_SET_2_OPTIONS.find((o) => String(o.index) === value);
-                  handleSelectChange("infusionSet2", option?.label || "", option?.index ?? null);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select option" />
-                </SelectTrigger>
-                <SelectContent>
-                  {INFUSION_SET_2_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.index} value={String(opt.index)}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          </div>
+
+          {/* Infusion Set pairs */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Infusion Set 1 group */}
+            <div className="rounded-lg border border-input bg-muted/20 p-4 space-y-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Infusion Set 1
+              </p>
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">Set Type</label>
+                <InfusionSetCombobox
+                  options={INFUSION_SET_1_OPTIONS}
+                  value={patient.infusionSet1Index}
+                  onSelect={(label, index) =>
+                    handleSelectChange("infusionSet1", label, index)
+                  }
+                  placeholder="Search infusion sets..."
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">Quantity</label>
+                <QtySelect
+                  value={patient.qtyInf1}
+                  onChange={(val) => onFieldChange("qtyInf1", val)}
+                />
+              </div>
             </div>
-            <div>
-              <label className="text-xs text-muted-foreground block mb-1">Quantity</label>
-              <Input
-                type="number"
-                min="1"
-                max="10"
-                value={patient.qtyInf2}
-                onChange={(e) => {
-                  const val = Math.min(10, Math.max(1, Number(e.target.value) || 1));
-                  onFieldChange("qtyInf2", String(val));
-                }}
-                placeholder="1"
-              />
+
+            {/* Infusion Set 2 group */}
+            <div className="rounded-lg border border-input bg-muted/20 p-4 space-y-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Infusion Set 2
+              </p>
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">Set Type</label>
+                <InfusionSetCombobox
+                  options={INFUSION_SET_2_OPTIONS}
+                  value={patient.infusionSet2Index}
+                  onSelect={(label, index) =>
+                    handleSelectChange("infusionSet2", label, index)
+                  }
+                  placeholder="Search infusion sets..."
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">Quantity</label>
+                <QtySelect
+                  value={patient.qtyInf2}
+                  onChange={(val) => onFieldChange("qtyInf2", val)}
+                />
+              </div>
             </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      ) : (
+        <Card className="p-4 border-dashed">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-semibold">Pump & Infusion Sets</span> — hidden (not in serving)
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setPumpOverride(true)}
+              className="text-muted-foreground text-xs gap-1"
+            >
+              <Eye className="h-3.5 w-3.5" /> Show
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* ─── Section 3: Subscription & Logistics ─── */}
       <Card className="p-6">
@@ -240,55 +388,32 @@ export function WelcomeCallForm({ patient, onFieldChange }: Props) {
             </Select>
           </div>
 
-          {/* Welcome Call Text */}
-          <div>
-            <label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold block mb-2">
-              Welcome Call Text
-            </label>
-            <Select
-              value={patient.welcomeCallTextIndex !== null ? String(patient.welcomeCallTextIndex) : ""}
-              onValueChange={(value) => {
-                const option = WELCOME_CALL_TEXT_OPTIONS.find((o) => String(o.index) === value);
-                handleSelectChange("welcomeCallText", option?.label || "", option?.index ?? null);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select option" />
-              </SelectTrigger>
-              <SelectContent>
-                {WELCOME_CALL_TEXT_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.index} value={String(opt.index)}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Order Handling */}
-          <div>
-            <label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold block mb-2">
-              Order Handling
-            </label>
-            <Select
-              value={patient.orderHandlingIndex !== null ? String(patient.orderHandlingIndex) : ""}
-              onValueChange={(value) => {
-                const option = ORDER_HANDLING_OPTIONS.find((o) => String(o.index) === value);
-                handleSelectChange("orderHandling", option?.label || "", option?.index ?? null);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select option" />
-              </SelectTrigger>
-              <SelectContent>
-                {ORDER_HANDLING_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.index} value={String(opt.index)}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Order Handling — only if subscription type is Sensors & Supplies */}
+          {showOrderHandling && (
+            <div>
+              <label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold block mb-2">
+                Order Handling
+              </label>
+              <Select
+                value={patient.orderHandlingIndex !== null ? String(patient.orderHandlingIndex) : ""}
+                onValueChange={(value) => {
+                  const option = ORDER_HANDLING_OPTIONS.find((o) => String(o.index) === value);
+                  handleSelectChange("orderHandling", option?.label || "", option?.index ?? null);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select option" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ORDER_HANDLING_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.index} value={String(opt.index)}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         {/* Address — full width */}
@@ -327,6 +452,31 @@ export function WelcomeCallForm({ patient, onFieldChange }: Props) {
               <p className="text-xs text-amber-600 mt-1">Address will be updated on sync</p>
             )}
           </div>
+        </div>
+
+        {/* Welcome Call Text — button below address */}
+        <div className="mt-6">
+          <Button
+            variant={patient.welcomeCallTextIndex !== null ? "secondary" : "default"}
+            className={cn(
+              "gap-2 w-full sm:w-auto",
+              patient.welcomeCallTextIndex !== null && "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300"
+            )}
+            onClick={() => {
+              if (patient.welcomeCallTextIndex !== null) {
+                // Toggle off
+                onFieldChange("welcomeCallText", "");
+                onFieldChange("welcomeCallTextIndex" as keyof Patient, null);
+              } else {
+                // Set to Send (index 0)
+                onFieldChange("welcomeCallText", "Send");
+                onFieldChange("welcomeCallTextIndex" as keyof Patient, 0);
+              }
+            }}
+          >
+            <MessageSquare className="h-4 w-4" />
+            {patient.welcomeCallTextIndex !== null ? "Welcome Call Text: Queued" : "Send Welcome Call Text"}
+          </Button>
         </div>
       </Card>
     </div>

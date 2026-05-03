@@ -34,6 +34,8 @@ export const COL = {
   cgmType: "color_mm1w7pmf",
   requestType: "color_mm1w1978",
   doctorName: "text_mm1x46et",
+  referralSource: "color_mm1w5wxr",
+  referralReceivedDate: "date_mm1x4e1r",
   diagnosis: "color_mm1wf7rv",
   notes: "long_text_mm2ffsme",
   
@@ -57,6 +59,7 @@ export const READ_COLUMN_IDS = [
   COL.dob, COL.phone, COL.email, COL.address, COL.gender,
   COL.primaryInsurance, COL.memberId1, COL.secondaryInsurance, COL.memberId2,
   COL.serving, COL.pumpType, COL.cgmType, COL.requestType, COL.doctorName,
+  COL.referralSource, COL.referralReceivedDate,
   COL.diagnosis, COL.notes,
   COL.monitorQty, COL.pumpQty, COL.qtyInf1, COL.infusionSet1,
   COL.qtyInf2, COL.infusionSet2, COL.subscriptionType, COL.welcomeCallText,

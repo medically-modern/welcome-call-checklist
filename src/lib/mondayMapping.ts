@@ -54,6 +54,8 @@ export function mondayItemToPatient(item: MondayItem): Patient {
     cgmTypeIndex: statusIndex(COL.cgmType),
     requestType: txt(COL.requestType),
     doctorName: txt(COL.doctorName),
+    referralSource: txt(COL.referralSource),
+    referralReceivedDate: txt(COL.referralReceivedDate),
     diagnosis: txt(COL.diagnosis),
     notes: txt(COL.notes),
     monitorQty: txt(COL.monitorQty),

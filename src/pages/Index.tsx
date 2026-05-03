@@ -13,6 +13,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { RotateCcw, ClipboardCheck } from "lucide-react";
 import { toast } from "sonner";
 import { sendPatientToMonday } from "@/lib/mondayWrite";
+import { validatePatientForSend } from "@/lib/workflow";
 
 const Index = () => {
   const { patients, loading, error, refetch, update, clearOverlay } = useMondayPatients();
@@ -25,6 +26,11 @@ const Index = () => {
   const selected: Patient | undefined = useMemo(
     () => patients.find((p) => p.id === selectedId),
     [patients, selectedId],
+  );
+
+  const validation = useMemo(
+    () => selected ? validatePatientForSend(selected) : { valid: false, errors: [] },
+    [selected],
   );
 
   const handleFieldChange = (field: keyof Patient, value: string | number | null) => {
@@ -150,7 +156,11 @@ const Index = () => {
                     onToggle={toggleEscalate}
                     disabled={!selected}
                   />
-                  <SendToMondayButton onSend={handleSend} disabled={!selected} />
+                  <SendToMondayButton
+                    onSend={handleSend}
+                    disabled={!selected || !validation.valid}
+                    validationErrors={validation.errors}
+                  />
                 </>
               )}
             </section>
