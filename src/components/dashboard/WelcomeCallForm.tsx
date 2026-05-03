@@ -8,6 +8,9 @@ import {
   ORDER_HANDLING_OPTIONS,
   servingIncludesCgm,
   servingIncludesPump,
+  isCrossSell,
+  isInfusionSelling,
+  expectedSubscriptionType,
 } from "@/lib/workflow";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -222,6 +225,11 @@ export function WelcomeCallForm({ patient, onFieldChange }: Props) {
                   ))}
                 </SelectContent>
               </Select>
+              {isCrossSell(patient) && (
+                <p className="mt-2 text-xs font-medium text-red-600">
+                  Cross-sell: verify the patient's CGM — Dexcom G7 was used as the default.
+                </p>
+              )}
             </div>
 
             {/* Monitor Qty — toggle (0 or 1) */}
@@ -312,6 +320,12 @@ export function WelcomeCallForm({ patient, onFieldChange }: Props) {
                   value={patient.qtyInf1}
                   onChange={(val) => onFieldChange("qtyInf1", val)}
                 />
+                {isInfusionSelling(patient.infusionSet1Index) &&
+                  (!patient.qtyInf1 || patient.qtyInf1 === "0") && (
+                    <p className="mt-2 text-xs font-medium text-red-600">
+                      Infusion set selected — please choose a quantity.
+                    </p>
+                  )}
               </div>
             </div>
 
@@ -337,6 +351,12 @@ export function WelcomeCallForm({ patient, onFieldChange }: Props) {
                   value={patient.qtyInf2}
                   onChange={(val) => onFieldChange("qtyInf2", val)}
                 />
+                {isInfusionSelling(patient.infusionSet2Index) &&
+                  (!patient.qtyInf2 || patient.qtyInf2 === "0") && (
+                    <p className="mt-2 text-xs font-medium text-red-600">
+                      Infusion set selected — please choose a quantity.
+                    </p>
+                  )}
               </div>
             </div>
           </div>
@@ -386,6 +406,20 @@ export function WelcomeCallForm({ patient, onFieldChange }: Props) {
                 ))}
               </SelectContent>
             </Select>
+            {(() => {
+              const expected = expectedSubscriptionType(patient);
+              const selected = patient.subscriptionTypeIndex !== null
+                ? SUBSCRIPTION_TYPE_OPTIONS.find((o) => o.index === patient.subscriptionTypeIndex)?.label ?? null
+                : null;
+              if (expected && selected && expected !== selected) {
+                return (
+                  <p className="mt-2 text-xs font-medium text-red-600">
+                    Mismatch: based on the selections above, expected <span className="font-semibold">{expected}</span> but <span className="font-semibold">{selected}</span> is selected.
+                  </p>
+                );
+              }
+              return null;
+            })()}
           </div>
 
           {/* Order Handling — only if subscription type is Sensors & Supplies */}

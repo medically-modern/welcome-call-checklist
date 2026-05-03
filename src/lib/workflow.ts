@@ -149,6 +149,42 @@ export function servingIncludesPump(serving: string): boolean {
   return s.includes('pump') || s.includes('supplies');
 }
 
+/* ─── Cross-Sell + Subscription consistency helpers ─── */
+
+const CGM_NOT_SERVING_INDEX = 9;
+const INFUSION_NOT_SERVING_INDEX = 101;
+
+/** True when the agent is being asked to cross-sell CGM:
+ *  serving includes CGM but the original request type does not. */
+export function isCrossSell(p: { serving: string; requestType: string }): boolean {
+  return servingIncludesCgm(p.serving) && !servingIncludesCgm(p.requestType);
+}
+
+/** True if the user has selected a "selling" CGM type (anything other than Not Serving). */
+export function isCgmSelling(cgmTypeIndex: number | null): boolean {
+  return cgmTypeIndex !== null && cgmTypeIndex !== CGM_NOT_SERVING_INDEX;
+}
+
+/** True if a single infusion set slot is "selling" (set selected, not Not Serving). */
+export function isInfusionSelling(infusionSetIndex: number | null): boolean {
+  return infusionSetIndex !== null && infusionSetIndex !== INFUSION_NOT_SERVING_INDEX;
+}
+
+/** What the Subscription Type SHOULD be based on CGM Type + Infusion Set selections.
+ *  Returns null if neither CGM nor infusion is selling (no expectation). */
+export function expectedSubscriptionType(p: {
+  cgmTypeIndex: number | null;
+  infusionSet1Index: number | null;
+  infusionSet2Index: number | null;
+}): string | null {
+  const cgm = isCgmSelling(p.cgmTypeIndex);
+  const infusion = isInfusionSelling(p.infusionSet1Index) || isInfusionSelling(p.infusionSet2Index);
+  if (cgm && infusion) return 'Sensors & Supplies';
+  if (cgm) return 'Sensors';
+  if (infusion) return 'Supplies';
+  return null;
+}
+
 /* ─── Phone formatting ─── */
 
 export function formatPhone(raw: string): string {
@@ -169,7 +205,7 @@ export function formatDateMDY(raw: string): string {
   // Monday date columns come as YYYY-MM-DD
   const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (match) {
-    return \`\${match[2]}/\${match[3]}/\${match[1]}\`;
+    return `${match[2]}/${match[3]}/${match[1]}`;
   }
   return raw;
 }

@@ -1,5 +1,5 @@
 import type { Patient } from "@/lib/workflow";
-import { SECONDARY_INSURANCE_OPTIONS, formatPhone, formatDateMDY } from "@/lib/workflow";
+import { SECONDARY_INSURANCE_OPTIONS, formatPhone, formatDateMDY, isCrossSell } from "@/lib/workflow";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -68,11 +68,27 @@ export function PatientInfoCard({ patient, onFieldChange }: Props) {
       {/* Row 1: Referral/Product + Insurance */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="p-4">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <Field label="Referral Source" value={patient.referralSource} />
             <Field label="Doctor Name" value={patient.doctorName} />
             <Field label="Request Type" value={patient.requestType} />
-            <Field label="Serving" value={patient.serving} />
+            {patient.serving ? (
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                  Serving
+                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-medium" title={patient.serving}>
+                    {patient.serving}
+                  </p>
+                  {isCrossSell(patient) && (
+                    <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider border border-amber-300">
+                      Cross Sell
+                    </span>
+                  )}
+                </div>
+              </div>
+            ) : null}
           </div>
         </Card>
 
