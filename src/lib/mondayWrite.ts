@@ -16,10 +16,10 @@ export async function sendPatientToMonday(p: Patient): Promise<void> {
   if (p.memberId2Edited !== null && p.memberId2Edited !== "")
     tasks.push(writeText(p.id, COL.memberId2, p.memberId2Edited));
 
-  if (p.monitorQty) tasks.push(writeNumber(p.id, COL.monitorQty, Number(p.monitorQty)));
-  if (p.pumpQty) tasks.push(writeNumber(p.id, COL.pumpQty, Number(p.pumpQty)));
-  if (p.qtyInf1) tasks.push(writeNumber(p.id, COL.qtyInf1, Number(p.qtyInf1)));
-  if (p.qtyInf2) tasks.push(writeNumber(p.id, COL.qtyInf2, Number(p.qtyInf2)));
+  if (p.monitorQty !== "") tasks.push(writeNumber(p.id, COL.monitorQty, Number(p.monitorQty)));
+  if (p.pumpQty !== "") tasks.push(writeNumber(p.id, COL.pumpQty, Number(p.pumpQty)));
+  if (p.qtyInf1 !== "") tasks.push(writeNumber(p.id, COL.qtyInf1, Number(p.qtyInf1)));
+  if (p.qtyInf2 !== "") tasks.push(writeNumber(p.id, COL.qtyInf2, Number(p.qtyInf2)));
 
   if (p.infusionSet1Index !== null)
     tasks.push(writeStatusIndex(p.id, COL.infusionSet1, p.infusionSet1Index));
