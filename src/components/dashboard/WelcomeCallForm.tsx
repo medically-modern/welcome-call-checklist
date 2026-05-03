@@ -550,7 +550,7 @@ export function WelcomeCallForm({ patient, onFieldChange, onSendWelcomeCallText 
               "focus-visible:ring-emerald-500 focus-visible:ring-offset-0",
               patient.advanceDecisionIndex === 1
                 ? "bg-emerald-600 hover:bg-emerald-700 hover:text-white text-white border-emerald-700 shadow-md"
-                : "bg-emerald-50 hover:bg-emerald-100 hover:text-emerald-900 text-emerald-800 border-emerald-300"
+                : "bg-emerald-50 hover:bg-emerald-600 hover:text-white hover:border-emerald-700 text-emerald-800 border-emerald-300"
             )}
             onClick={() => {
               if (patient.advanceDecisionIndex === 1) {
@@ -577,7 +577,7 @@ export function WelcomeCallForm({ patient, onFieldChange, onSendWelcomeCallText 
               "focus-visible:ring-rose-500 focus-visible:ring-offset-0",
               patient.advanceDecisionIndex === 2
                 ? "bg-rose-600 hover:bg-rose-700 hover:text-white text-white border-rose-700 shadow-md"
-                : "bg-rose-50 hover:bg-rose-100 hover:text-rose-900 text-rose-800 border-rose-300"
+                : "bg-rose-50 hover:bg-rose-600 hover:text-white hover:border-rose-700 text-rose-800 border-rose-300"
             )}
             onClick={() => {
               if (patient.advanceDecisionIndex === 2) {
